@@ -25,7 +25,23 @@
  * browser and injection gates, which Stryker is not running and cannot see. A total read as a
  * coverage figure for Atlas would be wrong by most of its value.
  *
+ * ## The reading as it stands
+ *
+ * On the runner, at 18,051 mutants: 1h43m, 4,125 killed, 35 timed out, 1,865 survived, 12,026 with
+ * no coverage, 69.05% covered. The same mutants on a 32-thread machine: 15m12s, 4,077 killed, 237
+ * timed out, 1,711 survived, 71.60% covered. Prefer the runner's figure. The population is
+ * identical and the scores are not, because 24 workers make mutants time out that four workers run
+ * to a verdict, and a timeout is scored as a kill, so the local score is the inflated one.
+ *
+ * The survivors sit where the first reading found them, with `core/src/routing.ts` down from 625 to
+ * 406 where the refusal tests below landed: `routing.ts` (406), `evaluator.ts` (359),
+ * `localized-input.ts` (217), `formatting.ts` (213), `runtime-safety.ts` (167), `extensions.ts`
+ * (153), `http/src/handler.ts` (73). Seven files hold 1,588 of the 1,865.
+ *
  * ## The first reading of the report
+ *
+ * Kept because what follows it was derived by reading those survivors, not by counting them. Its
+ * numbers are from before the refusal tests and describe a tree that is gone.
  *
  * On the runner: 17,765 mutants, 40m34s, 3,529 killed, 31 timed out, 1,888 survived, 12,317 with
  * no coverage. The survivors concentrate in seven files: `core/src/routing.ts` (625),

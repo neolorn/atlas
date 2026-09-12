@@ -38,12 +38,15 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    # Measured on the first green run rather than estimated: 2,403 seconds of gate wall over 3,497
-    # seconds of stage time at `peak 2 of 2 concurrent`, and 42 minutes of billed job once the
-    # engines, the Node builds and the two installs are counted. The same gate is 718 seconds
-    # locally over 1,451 at a peak of 15 of 32. The runner is not slower per unit of work; it has
-    # two cores where that machine has thirty-two, so the serial part arrives whole. The limit is
-    # high because a slow green is a result and a killed run is not.
+    # Measured on this repository's own runs rather than estimated, and on two of them because one
+    # number cannot show its own spread: 1,509 and 1,735 seconds of gate wall over 3,936 and 3,939
+    # seconds of stage time, both at `peak 4 of 4 concurrent`, in jobs of 27 and 31 minutes. The
+    # stage time is the work and it is steady to three seconds; the wall is what four shared cores
+    # did with it that hour. Setup is 81 seconds with every cache cold, so a warm run saves almost
+    # nothing and the job is the gate. The same gate is 876 seconds locally over 1,865 at a peak of
+    # 18 of 32: not slower per unit of work, four cores where that machine has thirty-two, so the
+    # serial part arrives whole. The limit is high because a slow green is a result and a killed
+    # run is not.
     timeout-minutes: 180
 
     steps:
