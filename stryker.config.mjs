@@ -102,13 +102,16 @@ export default {
     'packages/runtime/src/**/*.ts',
     'packages/runtime/*/src/**/*.ts',
     '!packages/runtime/**/*.generated.ts',
-    // Two files the runtime and the toolkit each keep a copy of, because the runtime cannot import
+    // The files the runtime and the toolkit each keep a copy of, because the runtime cannot import
     // from a build-time package with `ajv`, `yaml` and `messageformat` behind it. What keeps the
     // copies honest is a test that reads both sources and asserts they are the same bytes, and
     // instrumenting a file changes its bytes, so mutating either copy fails that test in the dry
-    // run and nothing is measured at all. Found by the first full run, which died there.
+    // run and nothing is measured at all. Found by the first full run, which died there, and again
+    // by the first run after `xml-text.ts` joined them: every twin that test lists belongs here,
+    // and one that does not kills the next dispatch a minute into its dry run.
     '!packages/runtime/src/message-function-options.ts',
     '!packages/runtime/src/message-format-syntax.ts',
+    '!packages/runtime/core/src/xml-text.ts',
   ],
 
   // What is not copied into the sandbox. `fixtures/` holds consumer applications with their own
