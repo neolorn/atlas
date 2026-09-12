@@ -291,6 +291,15 @@ const PROSE_DATE = /(?<=^|\s)(?:19|20)\d{2}-\d{2}-\d{2}(?=[\s,;.:]|$)/gu;
 const DATE_OF_AN_ARTIFACT =
   /\badded:|\b(?:file[- ]?date|captured\s?on|dated|released|published|version|baseline)\b/iu;
 
+// A changelog heading names a version and the day it was released, which Keep a Changelog
+// requires and RELEASING carries out. It dates a published artifact anybody can fetch rather
+// than an internal event, so it belongs with the accepted dates above. It is spelled out
+// separately because the heading states a release without using any of those words, and the
+// bracketed version with its separator is what keeps this from accepting a sentence that
+// happens to mention a day.
+const CHANGELOG_RELEASE_HEADING =
+  /^##\s+\[\d+\.\d+\.\d+[^\]]*\]\s+-\s+(?:19|20)\d{2}-\d{2}-\d{2}\s*$/u;
+
 /**
  * Private projects. They are not this repository's to name.
  *
@@ -535,7 +544,9 @@ function scanText(text, where, { generated = false, criteria = true } = {}) {
       text,
       PROSE_DATE,
       where,
-      (line) => !DATE_OF_AN_ARTIFACT.test(line),
+      (line) =>
+        !DATE_OF_AN_ARTIFACT.test(line) &&
+        !CHANGELOG_RELEASE_HEADING.test(line.trim()),
     );
   }
   scan('tool', text, TOOLS, where);
