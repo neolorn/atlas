@@ -1,6 +1,6 @@
 {
   "name": "@neolorn/atlas-workspace",
-  "version": "1.0.0-rc.2",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.1.2",

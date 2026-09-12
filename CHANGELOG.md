@@ -9,7 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The 0.x line is the alpha
 stage, then the betas, then the release candidates that carry the changes breaking an earlier call.
 
-## [Unreleased]
+## [1.0.0] - 2026-09-12
 
 The first public release. `@neolorn/atlas` and `@neolorn/atlas-toolkit` are published to npm under
 the MIT license, at the surface the release candidates settled: template selectors without the
