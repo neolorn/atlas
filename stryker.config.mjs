@@ -87,7 +87,22 @@
  * `parsing.ts` 217, `formatting.ts` 213, `runtime-safety.ts` 174, `extensions.ts` 113,
  * `handler.ts` 74. Those are the next reading's purpose.
  */
+import { readFileSync } from 'node:fs';
 import { cpus } from 'node:os';
+
+/**
+ * The files the runtime and the toolkit each keep a copy of, read from the one list that names
+ * them. A test asserts the copies are the same bytes and instrumenting a file changes its bytes, so
+ * a twin left in the mutate set fails that test in the dry run and nothing is measured at all. That
+ * happened twice, the second time because this list and the test's list were kept in step by a
+ * comment. Derived here instead: a twin added to the list is excluded by having been added.
+ *
+ * Both copies are excluded, though only the runtime one is inside the globs below, so the rule
+ * stated here is the rule whatever those globs grow to cover.
+ */
+const twinExclusions = JSON.parse(
+  readFileSync(new URL('tools/twin-sources.json', import.meta.url), 'utf8'),
+).twins.flatMap(({ runtime, toolkit }) => [`!${runtime}`, `!${toolkit}`]);
 
 export default {
   packageManager: 'pnpm',
@@ -118,16 +133,7 @@ export default {
     'packages/runtime/src/**/*.ts',
     'packages/runtime/*/src/**/*.ts',
     '!packages/runtime/**/*.generated.ts',
-    // The files the runtime and the toolkit each keep a copy of, because the runtime cannot import
-    // from a build-time package with `ajv`, `yaml` and `messageformat` behind it. What keeps the
-    // copies honest is a test that reads both sources and asserts they are the same bytes, and
-    // instrumenting a file changes its bytes, so mutating either copy fails that test in the dry
-    // run and nothing is measured at all. Found by the first full run, which died there, and again
-    // by the first run after `xml-text.ts` joined them: every twin that test lists belongs here,
-    // and one that does not kills the next dispatch a minute into its dry run.
-    '!packages/runtime/src/message-function-options.ts',
-    '!packages/runtime/src/message-format-syntax.ts',
-    '!packages/runtime/core/src/xml-text.ts',
+    ...twinExclusions,
   ],
 
   // What is not copied into the sandbox. `fixtures/` holds consumer applications with their own

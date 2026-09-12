@@ -155,9 +155,11 @@ const steps = Object.freeze([
   // Everything else the runtime does is proven in the feature lab, against the built package,
   // because that is the only place a claim about wiring can be made at all. An invariant is
   // asserted here or there, never in both, so this does not become a second copy of the lab.
+  // `source:tools` because the twin drift test reads `tools/twin-sources.json`, the one list of
+  // files the two packages each keep a copy of, which the mutation configuration reads too.
   {
     id: 'test:runtime',
-    reads: ['source:packages'],
+    reads: ['source:packages', 'source:tools'],
     writes: ['cache:vitest:runtime'],
   },
   // The first of three stages that mutate tracked source in place and restore it. Each gets a tree

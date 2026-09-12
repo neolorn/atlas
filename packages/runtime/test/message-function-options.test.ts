@@ -36,8 +36,22 @@ import { parse, render, renderSemantics } from './message-harness.js';
 
 const NONE: readonly CompiledInputContract[] = Object.freeze([]);
 
-const sourceOf = (specifier: string): string =>
-  readFileSync(fileURLToPath(new URL(specifier, import.meta.url)), 'utf8');
+const repositoryRoot = new URL('../../../', import.meta.url);
+
+const sourceOf = (path: string): string =>
+  readFileSync(fileURLToPath(new URL(path, repositoryRoot)), 'utf8');
+
+/**
+ * The twins, read from the list the mutation configuration reads. Stryker instruments the files it
+ * mutates, which changes their bytes, so a twin it mutates fails this test in the dry run and no
+ * reading is taken at all. That happened twice while the exclusions were a second list kept in
+ * step by a comment. One list cannot drift from itself.
+ */
+const twins: readonly { runtime: string; toolkit: string }[] = (
+  JSON.parse(sourceOf('tools/twin-sources.json')) as {
+    twins: { runtime: string; toolkit: string }[];
+  }
+).twins;
 
 describe('the option table', () => {
   /**
@@ -45,21 +59,15 @@ describe('the option table', () => {
    * with `ajv`, `yaml` and `messageformat` behind it and none of that belongs in a browser bundle.
    * So a file both packages need is duplicated, and duplication without a check is drift with a
    * delay on it. A test can read both sources from disk where the shipped packages cannot, so every
-   * twin in the repository is listed here rather than beside whichever copy was written first.
+   * twin in the repository is listed in `tools/twin-sources.json` rather than beside whichever copy
+   * was written first.
    */
-  it.each([
-    [
-      '../src/message-function-options.ts',
-      '../../toolkit/src/message-function-options.ts',
-    ],
-    [
-      '../src/message-format-syntax.ts',
-      '../../toolkit/src/message-format-syntax.ts',
-    ],
-    ['../core/src/xml-text.ts', '../../toolkit/src/xml-text.ts'],
-  ])('%s and %s are the same file', (runtimePath, toolkitPath) => {
-    expect(sourceOf(runtimePath)).toBe(sourceOf(toolkitPath));
-  });
+  it.each(twins.map(({ runtime, toolkit }) => [runtime, toolkit]))(
+    '%s and %s are the same file',
+    (runtimePath, toolkitPath) => {
+      expect(sourceOf(runtimePath)).toBe(sourceOf(toolkitPath));
+    },
+  );
 
   it('declares every option each function has and no others', () => {
     for (const [name, profile] of Object.entries(

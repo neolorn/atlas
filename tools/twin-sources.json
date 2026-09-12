@@ -1,0 +1,16 @@
+{
+  "twins": [
+    {
+      "runtime": "packages/runtime/src/message-function-options.ts",
+      "toolkit": "packages/toolkit/src/message-function-options.ts"
+    },
+    {
+      "runtime": "packages/runtime/src/message-format-syntax.ts",
+      "toolkit": "packages/toolkit/src/message-format-syntax.ts"
+    },
+    {
+      "runtime": "packages/runtime/core/src/xml-text.ts",
+      "toolkit": "packages/toolkit/src/xml-text.ts"
+    }
+  ]
+}
