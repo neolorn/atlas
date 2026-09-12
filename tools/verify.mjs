@@ -1,6 +1,7 @@
 import { execFileSync, spawn } from 'node:child_process';
 import {
   appendFileSync,
+  cpSync,
   existsSync,
   mkdirSync,
   readFileSync,
@@ -1216,6 +1217,49 @@ const red =
 // them: the failure is reproducible in the tree it happened in, and a resume needs the artefacts the
 // passed stages left there (a dist, a materialized consumer), which live in the tree rather than
 // in this repository. Throwing them away would make a resume rebuild everything it had just proven.
+/**
+ * What a green run leaves behind.
+ *
+ * A stage writes its artefacts in the tree it ran in, and a green run removes the trees, so what a
+ * stage produced is gone by the time anyone reads the verdict. That is right for a dist and a
+ * materialized consumer, which the next run rebuilds. It is wrong for the tarballs: RELEASING has a
+ * publish take the archives the suite verified, and an archive that is not there is replaced by a
+ * fresh pack nobody checked, which is the failure `verify:tarballs` exists to prevent.
+ *
+ * Keyed by the artefact the graph already names, so the stage that writes it and the tree it wrote
+ * it in are derived here rather than restated.
+ */
+const KEPT_FROM_A_GREEN_RUN = new Map([['release:packages', 'release']]);
+
+if (!red) {
+  for (const [artefact, directory] of KEPT_FROM_A_GREEN_RUN) {
+    const producers = steps.filter((step) =>
+      (step.writes ?? []).includes(artefact),
+    );
+    if (producers.length !== 1) {
+      throw new Error(
+        `${artefact} is kept from a green run and ${producers.length} stages write it. Exactly one must, or there is no single tree to take ${directory} from.`,
+      );
+    }
+    const [producer] = producers;
+    const from = resolve(treesInUse.get(treeOf(producer)), directory);
+    if (!existsSync(from)) {
+      throw new Error(
+        `${producer.id} passed and left no ${directory} in its tree, so there is nothing to keep. A green run promises the publishable pair at ${resolve(workspaceRoot, directory)}.`,
+      );
+    }
+    const kept = resolve(workspaceRoot, directory);
+    rmSync(kept, {
+      recursive: true,
+      force: true,
+      maxRetries: 10,
+      retryDelay: 300,
+    });
+    cpSync(from, kept, { recursive: true });
+    process.stdout.write(`=== ${directory} kept from ${producer.id}\n`);
+  }
+}
+
 if (keepTrees || red) {
   process.stdout.write(
     `=== trees kept at ${treesRoot}${red ? ' (this run was red; a resume will reuse them)' : ''}\n`,

@@ -37,6 +37,11 @@ const source = resolve(workspaceRoot, packageDirectory);
 // faults injected, which cleans `dist/` each time. An archive kept in there would be gone by the
 // time anyone reached for it.
 //
+// Under the gate this runs in a worktree, which a green run removes, so the runner copies this
+// directory out into the repository once the verdict is green. That is what makes RELEASING's
+// instruction true: what a publish takes is the archive the suite verified, not a fresh pack of
+// the same version that nothing looked at.
+//
 // One directory per package, because packing the second must not delete the first's verified
 // archive: both are published together.
 const verifiedRoot = resolve(workspaceRoot, 'release');
