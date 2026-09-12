@@ -128,7 +128,7 @@ chore(release): 1.0.0
 - The description says what changed, why, how it was verified, and any migration a user needs.
 - Link the related issue when there is one.
 
-Pull requests are squash-merged onto `main`, which is the only long-lived branch and stays linear. Name topic branches `<type>/<short-description>`, for example `feat/parent-locale-fallback`.
+Pull requests are squash-merged onto `main`, which is the only long-lived branch and stays linear. Name topic branches `<type>/<short-description>`, for example `feat/parent-locale-fallback`. A maintainer commits to `main` directly under the same checks and the same commit convention, and the pull request path is how a change from outside the maintainers reaches it.
 
 ## Documentation
 
