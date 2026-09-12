@@ -22,6 +22,11 @@ npx @angular/cli new my-app --routing --style css
 cd my-app
 ```
 
+The CLI asks whether to enable server-side rendering. Answer no, which is the default, so the
+application this tutorial builds runs in the browser alone and every file below is the file the CLI
+wrote. Atlas localizes a server-rendered application too, and [How to render on the
+server](how-to/render-on-the-server.md) starts from one.
+
 Run `npm start` and open the address the CLI prints. The Angular welcome page appears. Stop the
 server before continuing.
 
@@ -115,6 +120,10 @@ npx atlas generate
 - `#i18n/shell` exports `messages`, one typed handle for each key in the `shell` scope.
 
 Keys are kebab-case in the file and camelCase in code, so `app-title` is `messages.appTitle`.
+
+`generate` also reports that every message in the scope is unreached. Nothing has used one yet, so
+that is what it should say here, and it goes away at the second compile further down, once the
+components below read them.
 
 ## Declare the locale policy
 
@@ -489,7 +498,8 @@ Run the suite:
 npm test
 ```
 
-Four cases pass.
+Four cases pass. The run also prints `Not implemented: Window's scrollTo()` a few times, which is
+the test environment saying it has no scrolling to do rather than anything about the application.
 
 ## What to read next
 

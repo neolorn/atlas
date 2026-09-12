@@ -72,6 +72,17 @@ Every policy takes `localeNeutralRoots`, a list of path roots that keep one addr
 Use it for a sign-in callback, a webhook receiver, or anything a third party has already recorded the
 address of.
 
+## Serve a prefixed address from a static host
+
+Under a path policy the first segment of every address is a locale, so a host that serves files by
+path has no file at `/ar-eg` and answers 404. Point the host's fallback at `index.html`, the same
+setting any router-driven Angular application needs, and the application reads the locale out of the
+address it was opened at. `ng serve` does this already, so the first place the setting is missing is
+usually a deployment of the build.
+
+A server-rendered application answers the address itself and needs no fallback; [How to render on
+the server](render-on-the-server.md) covers that path.
+
 ## Related
 
 - [About how routing derives addresses](../explanation/about-addresses.md)
