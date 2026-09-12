@@ -11,18 +11,23 @@
 # and belongs fixed there rather than worked around in this file.
 name: verify
 
-# Dispatch and pull requests, and nothing automatic. The included minutes are one pool shared by
-# every private repository on the account, so minutes spent here are minutes another repository
-# does not have. That makes the runner something to consult deliberately, before a release or on a
-# change worth a second operating system, rather than something that answers every commit. Every
-# commit is gate-green locally before it is pushed, so what the runner adds is Linux, not a second
-# opinion on the same stages.
+# Every push to `main`, every pull request, and on request. This ran on dispatch alone while the
+# repository was private, because the included minutes were one pool shared by every private
+# repository on the account and a run here was a run another repository did not get. A public
+# repository has no such pool: standard runners are free and unmetered, so the reason to ration
+# this is gone and the cost of an automatic run is wall time nobody is waiting on.
+#
+# Every commit is gate-green locally before it is pushed, so what this adds is Linux rather than a
+# second opinion on the same stages. Atlas is developed on Windows, and the tooling carries
+# `process.platform` branches whose other half only executes here.
 on:
-  workflow_dispatch:
+  push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 # One run per branch, and a newer run supersedes one still going: a superseded run proves a commit
-# nobody is looking at any more, and this is billed by the minute.
+# nobody is looking at any more, and a queue of those delays the run somebody is waiting for.
 concurrency:
   group: verify-${{ github.ref }}
   cancel-in-progress: true
