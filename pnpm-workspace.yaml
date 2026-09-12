@@ -1,0 +1,20 @@
+packages:
+  - packages/*
+
+autoInstallPeers: false
+strictPeerDependencies: true
+savePrefix: ''
+nodeVersion: 24.18.0
+engineStrict: true
+
+allowBuilds:
+  '@parcel/watcher': true
+  esbuild: true
+  lmdb: true
+  msgpackr-extract: true
+  # The linter's module resolver. Its install script is `napi-postinstall`, which exists to
+  # fetch a native binding when the platform-specific optional dependency did not resolve. The
+  # lockfile carries all twenty-two of them, the right one installs on its own, and the lint
+  # self-test fails if module resolution is not working, so nothing here needs to run a script
+  # from a package to work.
+  unrs-resolver: false

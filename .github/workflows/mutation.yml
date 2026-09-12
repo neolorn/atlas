@@ -1,0 +1,171 @@
+# Mutation testing, on request.
+#
+# Deliberately not a stage in `verify`. Atlas already mutation-tests by hand, with 53 declared
+# injections across two harnesses taking more than half the gate's stage time, and those are the
+# mutations somebody thought of. This is the general form, and its cost is why it is not automatic:
+# roughly 36,000 mutants across the two packages, against suites that take seconds each.
+#
+# What comes out is a reading list, not a verdict. `thresholds.break` is null, so a score cannot
+# fail this job; only an error can. Survivors worth guarding become injections in
+# `verify-assurance.mjs` and `verify-assurance-runtime.mjs`, which the gate runs.
+#
+# The scope is the runtime package. `stryker.config.mjs` carries why, and it is a measurement
+# rather than a judgement about which package matters: the toolkit's own 15,662 mutants did not
+# finish in fifteen minutes locally, and a job that cannot finish is not a job.
+#
+# ## Neither half runs here while this repository is private
+#
+# Dispatch 34186603266 asked for the toolkit half and was cancelled at about two hours a job, which
+# is roughly 360 billed minutes for no reading. Left alone it would have run to the five hours a
+# job the split was sampled at: three jobs, around 900 minutes, out of a 2,000-minute pool shared by
+# every private repository on the account. One reading is not worth close to half the month.
+#
+# The runtime half is forty minutes rather than fifteen hours, and it is held to the same rule
+# anyway, because the pool is one pool and the cheap job is what makes the expensive one look
+# affordable.
+#
+# So both halves are read locally, on a machine whose minutes cost nothing, and the readings live
+# beside the configuration that produced them: the runtime one in `stryker.config.mjs`, the toolkit
+# one in `stryker.toolkit.config.mjs`. A local reading is not the same reading, because 24 workers
+# rather than two changes which mutants time out and a timeout is scored as a kill, so each one says
+# so where it is recorded. This file becomes the place a reading is taken again when the repository
+# is public and these minutes are not billed.
+name: mutation
+
+# Dispatch only, with no schedule. The included minutes are one pool shared by every private
+# repository on the account, and this is the most expensive job that can spend them, so it runs
+# when somebody wants a reading and not otherwise. A weekly cron spends the pool on the weeks where
+# nothing changed, and the weeks where something did are the ones worth reading anyway.
+on:
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: Which half to read
+        type: choice
+        default: runtime
+        options: [runtime, toolkit, both]
+
+# One at a time, and the newer one wins. A run still going when the next is dispatched is measuring
+# a commit nobody asked about any more.
+concurrency:
+  group: mutation-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# The default is the cheap half, so a dispatch made without reading this file costs about forty
+# minutes rather than most of a day. The toolkit half is asked for on purpose.
+jobs:
+  runtime:
+    if: inputs.scope != 'toolkit'
+    runs-on: ubuntu-latest
+    # Measured here rather than estimated: 17,765 mutants in 40 minutes 34 seconds on this two-core
+    # runner, against 6 minutes 29 seconds on a 32-thread machine. Three hours is far more than that
+    # needs, on the reasoning the gate's own timeout carries: a slow green is a result and a killed
+    # run is not.
+    timeout-minutes: 180
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+
+      # The same pin, read from the same place as the gate's workflow.
+      - name: Install pnpm
+        run: |
+          version="$(node -p "require('./package.json').packageManager.split('@')[1]")"
+          npm install --global "pnpm@${version}"
+          pnpm --version
+
+      - name: Locate the pnpm store
+        id: store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v6
+        with:
+          path: ${{ steps.store.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'fixtures/**/pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      - run: pnpm install --frozen-lockfile
+
+      # No engines and no Node builds: this runs the two fast vitest suites and nothing else.
+      - name: Mutate
+        run: pnpm run mutation
+
+      # The whole point of the run. The HTML report is how a survivor is read: the mutant, the line,
+      # and the tests that did not notice. Nothing else is left on a runner.
+      - name: Keep the report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mutation-runtime-${{ github.run_id }}
+          path: tmp/mutation
+          if-no-files-found: warn
+          retention-days: 90
+
+  # One job per module rather than one job for the slice, and the reason is the measurement.
+  # Sampled at the concurrency this runner uses, the three together are between one and six hours,
+  # and the spread is that wide because the cost is not in the mutant count. It is in which tests
+  # cover a module: `compiler.ts` is a quarter of the mutants and two thirds of the time, because
+  # the tests that reach it are the five-second project host integration tests.
+  #
+  # A single job would sit against the platform's six-hour ceiling with no margin, and a job killed
+  # at the ceiling still bills for every minute it burned. Split, each part fits with room, the
+  # total billed time is the same because billing is per job minute, and a module that goes wrong
+  # costs one third of a reading instead of all of it.
+  toolkit:
+    if: inputs.scope != 'runtime'
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      matrix:
+        module:
+          - semantic-model
+          - compiler
+          - message-format
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+
+      - name: Install pnpm
+        run: |
+          version="$(node -p "require('./package.json').packageManager.split('@')[1]")"
+          npm install --global "pnpm@${version}"
+          pnpm --version
+
+      - name: Locate the pnpm store
+        id: store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v6
+        with:
+          path: ${{ steps.store.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'fixtures/**/pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      - run: pnpm install --frozen-lockfile
+
+      # `--mutate` replaces the configured list rather than filtering it, which is what this needs:
+      # one module per job, from the same configuration the whole slice uses.
+      - name: Mutate
+        run: >
+          pnpm exec stryker run stryker.toolkit.config.mjs
+          --mutate packages/toolkit/src/${{ matrix.module }}.ts
+
+      - name: Keep the report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: mutation-toolkit-${{ matrix.module }}-${{ github.run_id }}
+          path: tmp/mutation-toolkit
+          if-no-files-found: warn
+          retention-days: 90

@@ -1,0 +1,386 @@
+{
+  "schemaVersion": 1,
+  "profileId": "atlas-1",
+  "updatePolicy": "intentional-review-only",
+  "standardsProfile": {
+    "unicode": "17.0.0",
+    "cldrLdml": "48.2",
+    "messageFormat": "LDML 48.2",
+    "xliff": "2.2 Committee Specification 01",
+    "sitemap": "sitemaps.org 0.9"
+  },
+  "dataSources": {
+    "cldrCore": {
+      "version": "48.2",
+      "url": "https://unicode.org/Public/cldr/48.2/core.zip",
+      "checksumManifest": "https://unicode.org/Public/cldr/48.2/hashes/SHASUM512.txt",
+      "bytes": 36044097,
+      "digest": {
+        "algorithm": "SHA-512",
+        "encoding": "hex",
+        "value": "de8660f5371e0fcfd03a42e3b4fc4c686ec6cd602b402f1e3d227844005a54eb7952873894443523837d5828c42874a1a267a19f91ded207a2d166144791fa62"
+      },
+      "license": {
+        "name": "Unicode-3.0",
+        "url": "https://www.unicode.org/license.txt"
+      }
+    },
+    "cldrJsonCore": {
+      "package": "cldr-core",
+      "version": "48.2.0",
+      "role": "development-only derivation input",
+      "url": "https://registry.npmjs.org/cldr-core/-/cldr-core-48.2.0.tgz",
+      "digest": {
+        "algorithm": "SHA-512",
+        "encoding": "base64",
+        "value": "zfmLothncSwfv2jlevoSrgI2VGgH8SDGHXst6jUEotHA8nq9Igeg9jzdJDFtBso9pgJuG89DK16TzrmZDdo2Bg=="
+      },
+      "license": {
+        "name": "Unicode-3.0",
+        "url": "https://www.unicode.org/license.txt"
+      }
+    },
+    "cldrLocaleNames": {
+      "package": "cldr-localenames-full",
+      "version": "48.2.0",
+      "role": "Development-only derivation input. tools/generate-locale-profile.mjs derives packages/toolkit/src/endonyms.generated.ts, the name each locale gives itself, from this package's display-name data. Not shipped: the package is a dependency of neither published package, and only the generated table reaches one.",
+      "url": "https://registry.npmjs.org/cldr-localenames-full/-/cldr-localenames-full-48.2.0.tgz",
+      "digest": {
+        "algorithm": "SHA-512",
+        "encoding": "base64",
+        "value": "4o0paYDz0UXhfhChAVFkmVl2CP0YTSEqE6WrC0fNafaSC5u5DAXphxH3SZ1Ujczarikr8DToKZfiok6EqWLdNQ=="
+      },
+      "license": {
+        "name": "Unicode-3.0",
+        "url": "https://www.unicode.org/license.txt"
+      }
+    },
+    "cldrPersonNames": {
+      "package": "cldr-person-names-full",
+      "version": "48.2.0",
+      "url": "https://registry.npmjs.org/cldr-person-names-full/-/cldr-person-names-full-48.2.0.tgz",
+      "projectSnapshot": "data/cldr-person-names-48.2.0",
+      "role": "Development-only derivation input. tools/generate-person-names.mjs derives the deduplicated pattern table the toolkit carries, and the toolkit generates a per-consumer subset of it from the configured locales. Not shipped: neither the vendored files nor the full table reaches a browser.",
+      "fileCount": 767,
+      "bytes": 4649279,
+      "digest": {
+        "algorithm": "SHA-256",
+        "encoding": "hex",
+        "scope": "Manifest digest. One SHA-256 over the sorted lines `<name> <sha256-of-contents>` for every vendored file, LICENSE included, rather than 767 separate entries. Any single byte in any file moves this value, and tools/verify-standards-sources.mjs recomputes it.",
+        "value": "37dc79e909311921051eb31eb250f69c9a2887fa6f63288465cf7f2b9ca7d26b"
+      },
+      "snapshotLayout": "Each `main/<locale>/personNames.json` in the package is vendored as `<locale>.json`, contents byte for byte unchanged. Only the path is flattened; the manifest digest is over contents, so the layout carries no part of the provenance claim.",
+      "crossCheck": {
+        "method": "The published tarball was verified before extraction and nothing else was read. npm's own integrity value is recorded beside the SHA-256 so the two can disagree.",
+        "bytes": 98952,
+        "digest": {
+          "algorithm": "SHA-256",
+          "encoding": "hex",
+          "value": "f5b5aaacefceef99b6b7498f4da05dc889bc0cb3ce115a05201883bbad0b9c84"
+        },
+        "registryIntegrity": "sha512-j9c0tu2jQvWYHzNHQ3FfXzOsNjNqnuJIbUokd7Hl38og5x8lq4gkkSWaoUqdzc9GOkXdps16HqDOWyHSIs97Yw==",
+        "result": "identical"
+      },
+      "coverageNote": "766 locales collapse to 137 distinct profiles, 99 pattern cubes and 371 distinct pattern strings totalling 18 KB. Arabic was measured before the release was accepted: `ar` fills 42 of 54 cells, which is English's number. The 12 empty ones are `sorting` crossed with `addressing` and `monogram`, empty for every locale because a sorting form is a referring form. All 28 Arabic rows are identical to `ar` in this release, which is why `ar-EG` resolves through longest-prefix rather than being emitted as its own row.",
+      "license": {
+        "name": "Unicode-3.0",
+        "url": "https://www.unicode.org/license.txt",
+        "notice": "The package's own LICENSE is vendored alongside the data and is covered by the manifest digest."
+      }
+    },
+    "messageFormatConformance": {
+      "version": "LDML48.2",
+      "url": "https://codeload.github.com/unicode-org/message-format-wg/tar.gz/refs/tags/LDML48.2",
+      "projectSnapshot": "data/message-format-tests-48.2",
+      "role": "Development-only conformance input. tools/verify-message-format-conformance.mjs runs these cases through the built runtime's evaluator against the built toolkit's IR. Not shipped: no vendored file reaches a browser or a published package.",
+      "fileCount": 19,
+      "bytes": 90612,
+      "digest": {
+        "algorithm": "SHA-256",
+        "encoding": "hex",
+        "scope": "Manifest digest. One SHA-256 over the sorted lines `<name> <sha256-of-contents>` for every vendored file, LICENSE included. Any single byte in any file moves this value, and tools/verify-standards-sources.mjs recomputes it.",
+        "value": "b2178c0ee89fcbf3b0e3cbaf2f320c5d9f5875b2dfbc00cd11e5ada5f3192361"
+      },
+      "snapshotLayout": "The release's `test/` directory verbatim (`tests/`, `schemas/` and its README) with the repository LICENSE beside it. Nothing else from the release is vendored, because nothing else is data this repository reads.",
+      "crossCheck": {
+        "method": "The release tarball was hashed as downloaded, before extraction, and the vendored files were taken from that verified archive and from nothing else.",
+        "artifact": "message-format-wg-LDML48.2.tar.gz",
+        "artifactBytes": 2072986,
+        "artifactDigest": {
+          "algorithm": "SHA-256",
+          "encoding": "hex",
+          "value": "093f15394dd463e5a9d997f0526fbd0d8ec8e38cc393c35632f3d183aa79846e"
+        }
+      },
+      "whyThisTag": "The lock already pins the MessageFormat profile as `LDML 48.2`, and this is the release tagged for that same version. A conformance suite from a different revision of the specification tests a different specification, and would report differences as defects.",
+      "license": {
+        "name": "Unicode-3.0",
+        "url": "https://www.unicode.org/license.txt"
+      }
+    },
+    "ianaLanguageSubtagRegistry": {
+      "fileDate": "2026-06-14",
+      "url": "https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry",
+      "projectSnapshot": "data/language-subtag-registry-2026-06-14.txt",
+      "bytes": 731605,
+      "digest": {
+        "algorithm": "SHA-256",
+        "encoding": "hex",
+        "value": "be1fad86a99e3a932d07b80c9b3c271ec2381a5909ce22420144e5077ab0a43a"
+      },
+      "license": {
+        "name": "IANA/IETF Protocol Registries public-domain dedication",
+        "url": "https://www.iana.org/help/licensing-terms"
+      }
+    },
+    "unicodeDerivedBidiClass": {
+      "version": "17.0.0",
+      "fileDate": "2025-07-24",
+      "url": "https://www.unicode.org/Public/17.0.0/ucd/extracted/DerivedBidiClass.txt",
+      "projectSnapshot": "data/DerivedBidiClass-17.0.0.txt",
+      "role": "Development-only derivation input. tools/generate-locale-profile.mjs derives the strong right-to-left character class from Bidi_Class in {R, AL}. Not shipped: the generated character class is, the file is not.",
+      "bytes": 173433,
+      "digest": {
+        "algorithm": "SHA-256",
+        "encoding": "hex",
+        "value": "4867b4b7f0731ed1bfcd34cc6251211ff1542541fce0734b6fbda139ee80b3a4"
+      },
+      "crossCheck": {
+        "method": "Compared byte-for-byte against extracted/DerivedBidiClass.txt inside the normative UCD archive, acquired separately.",
+        "url": "https://www.unicode.org/Public/17.0.0/ucd/UCD.zip",
+        "bytes": 9101877,
+        "digest": {
+          "algorithm": "SHA-256",
+          "encoding": "hex",
+          "value": "2066d1909b2ea93916ce092da1c0ee4808ea3ef8407c94b4f14f5b7eb263d28e"
+        },
+        "result": "identical"
+      },
+      "defaultsNote": "Unassigned code points in blocks reserved for right-to-left scripts take R or AL, carried on the file's @missing lines rather than on data lines. The derivation applies those defaults first and lets every explicit line override them, so an unassigned code point in the Arabic block is treated as Arabic_Letter, which is what the standard says it is.",
+      "license": {
+        "name": "Unicode-3.0",
+        "url": "https://www.unicode.org/license.txt",
+        "notice": "© 2025 Unicode®, Inc."
+      }
+    },
+    "ianaTimeZoneDatabase": {
+      "version": "2026c",
+      "url": "https://data.iana.org/time-zones/releases/tzdata2026c.tar.gz",
+      "bytes": 475694,
+      "digest": {
+        "algorithm": "SHA-512",
+        "encoding": "hex",
+        "value": "e0b4b7044b66fbc27bc21d13d18063abcdf78ab58d5ba5fd64bd1a88d86e9d495f45add4d8e65bb6c40249f9c94ca29b72c8ebba8d0e4c468f2965ac77932ef0"
+      },
+      "license": {
+        "name": "Public domain",
+        "url": "https://data.iana.org/time-zones/tzdb-2026c/LICENSE"
+      }
+    },
+    "oasisXliff22Schemas": {
+      "version": "2.2 Committee Specification 01",
+      "fileDate": "2025-03-13",
+      "url": "https://docs.oasis-open.org/xliff/xliff-core/v2.2/cs01/schemas/",
+      "projectSnapshot": "data/xliff-2.2-cs01-schemas",
+      "role": "Normative schemas for the pinned XLIFF profile. Toolkit gate input: Atlas validates its own exported documents against them.",
+      "crossCheck": {
+        "method": "Each vendored file compared byte-for-byte against its entry in the official OASIS archive, acquired separately.",
+        "url": "https://docs.oasis-open.org/xliff/xliff-core/v2.2/cs01/xliff-core-v2.2-cs01.zip",
+        "bytes": 1659145,
+        "digest": {
+          "algorithm": "SHA-256",
+          "encoding": "hex",
+          "value": "49255020f8a045a6e4d3ad7b718893d11a3e6bd5d5f7851d8384d7eea6817928"
+        },
+        "result": "twelve of twelve identical"
+      },
+      "unresolvedReference": "itsm.xsd imports xliff_core_2.0.xsd, which OASIS does not ship in this directory. Nothing Atlas validates reaches itsm.xsd: the core schema imports only metadata.xsd and the XML namespace schema.",
+      "license": {
+        "name": "OASIS IPR Policy",
+        "url": "https://www.oasis-open.org/policies-guidelines/ipr/",
+        "notice": "Copyright © OASIS Open 2025. All Rights Reserved."
+      },
+      "files": {
+        "catalog.xml": {
+          "bytes": 945,
+          "digest": {
+            "algorithm": "SHA-256",
+            "encoding": "hex",
+            "value": "f336ac061ffc981885e2e5c8f12a691c736bc9bf4eee8db17707ba1535119034"
+          }
+        },
+        "fs.xsd": {
+          "bytes": 2613,
+          "digest": {
+            "algorithm": "SHA-256",
+            "encoding": "hex",
+            "value": "24f85b5b3a696882fce5d2cb2a58e9400ef4f50f36f8b137db45e6d63d17df70"
+          }
+        },
+        "glossary.xsd": {
+          "bytes": 1977,
+          "digest": {
+            "algorithm": "SHA-256",
+            "encoding": "hex",
+            "value": "eae44693a006590e152a16d6317c06094c625184c424a04748c9f4a075b982bb"
+          }
+        },
+        "its.xsd": {
+          "bytes": 7330,
+          "digest": {
+            "algorithm": "SHA-256",
+            "encoding": "hex",
+            "value": "e8ed285a440e49a665432869b97aec9c2a824e49e3216e9a25952cab30de6b58"
+          }
+        },
+        "itsm.xsd": {
+          "bytes": 558,
+          "digest": {
+            "algorithm": "SHA-256",
+            "encoding": "hex",
+            "value": "c04cf9837254f4781ebbd87c0bbe21bb48ee20a9d6a1742e87d905e6c3a8eaba"
+          }
+        },
+        "matches.xsd": {
+          "bytes": 2668,
+          "digest": {
+            "algorithm": "SHA-256",
+            "encoding": "hex",
+            "value": "bebf81cf1d92991d2f4d40a23339c2c414046468244c391c2dfdeb51f6606364"
+          }
+        },
+        "metadata.xsd": {
+          "bytes": 1510,
+          "digest": {
+            "algorithm": "SHA-256",
+            "encoding": "hex",
+            "value": "a4debf86bb92e578551931e74a5f90dbdd99be81c8d70d9cfdd87631ac579a25"
+          }
+        },
+        "plural_gender_select.xsd": {
+          "bytes": 582,
+          "digest": {
+            "algorithm": "SHA-256",
+            "encoding": "hex",
+            "value": "b4b3fedf0da99e4510be21e45c45a565695753b9db192fc177287153657c5b56"
+          }
+        },
+        "resource_data.xsd": {
+          "bytes": 3097,
+          "digest": {
+            "algorithm": "SHA-256",
+            "encoding": "hex",
+            "value": "72a1cb79cd6ee519380711a829515c679af74f8e6c7f56b03eb13a1991bab0f8"
+          }
+        },
+        "size_restriction.xsd": {
+          "bytes": 2103,
+          "digest": {
+            "algorithm": "SHA-256",
+            "encoding": "hex",
+            "value": "ab0e9eaf71d4c7f474743dfe36bb1863630a7634a460e1844413421058426bc5"
+          }
+        },
+        "validation.xsd": {
+          "bytes": 1889,
+          "digest": {
+            "algorithm": "SHA-256",
+            "encoding": "hex",
+            "value": "f05923fb23b8475baacc94c9291f90d4edec3277268178209ebbf7c601b420c8"
+          }
+        },
+        "xliff_core_2.2.xsd": {
+          "bytes": 17793,
+          "digest": {
+            "algorithm": "SHA-256",
+            "encoding": "hex",
+            "value": "d4bfff9a35b58b30d49850e163c28c724cb6ce18c87ee64e4c66224fd36bc83a"
+          }
+        }
+      }
+    },
+    "w3cXmlNamespaceSchema": {
+      "version": "Second Edition, 2009 revision of the 2001 schema",
+      "url": "https://www.w3.org/2001/xml.xsd",
+      "projectSnapshot": "data/xliff-2.2-cs01-schemas/xml.xsd",
+      "role": "Imported by xliff_core_2.2.xsd, its.xsd and resource_data.xsd for xml:lang and xml:space. Vendored because the validator makes no network requests, which is the property that keeps the gate deterministic.",
+      "bytes": 8836,
+      "digest": {
+        "algorithm": "SHA-256",
+        "encoding": "hex",
+        "value": "61960fb3131e38022caad5360e2f33a3382578ab3c80cd58bd74320ede61b20c"
+      },
+      "license": {
+        "name": "W3C Software and Document Notice and License",
+        "url": "https://www.w3.org/copyright/software-license/"
+      }
+    },
+    "sitemapsOrg09Schemas": {
+      "version": "0.9",
+      "fileDate": "2008-03-26 for sitemap.xsd, 2009-04-08 for siteindex.xsd",
+      "url": "https://www.sitemaps.org/schemas/sitemap/0.9/",
+      "projectSnapshot": "data/sitemaps-0.9-schemas",
+      "role": "Normative schemas for the sitemap protocol Atlas writes. Runtime gate input: Atlas validates its own emitted sitemaps and sitemap index against them. Never shipped.",
+      "license": {
+        "name": "sitemaps.org, unversioned publication",
+        "url": "https://www.sitemaps.org/terms.html"
+      },
+      "files": {
+        "siteindex.xsd": {
+          "bytes": 2591,
+          "digest": {
+            "algorithm": "SHA-256",
+            "encoding": "hex",
+            "value": "68d166ae92a07d5e8dbb0290d28c74aba24d896b721c0d3b1cee78c6aee9781e"
+          }
+        },
+        "sitemap.xsd": {
+          "bytes": 4451,
+          "digest": {
+            "algorithm": "SHA-256",
+            "encoding": "hex",
+            "value": "fbec77e84467050d5667394a57cc5cdfe1239d80aca1d61e9e0827173c3d9df9"
+          }
+        }
+      }
+    },
+    "w3cXhtml10StrictSchema": {
+      "version": "XHTML 1.0 Second Edition Strict, schema revision 1.2",
+      "url": "https://www.w3.org/2002/08/xhtml/xhtml1-strict.xsd",
+      "projectSnapshot": "data/sitemaps-0.9-schemas/xhtml1-strict.xsd",
+      "role": "Declares the global `link` element the hreflang extension puts inside a sitemap `url`. Both sitemap schemas end their content models with a `##other` wildcard at `processContents=\"strict\"`, so a validator refuses `xhtml:link` unless the XHTML namespace is imported into the compiled schema set. It imports the W3C XML namespace schema, which is already vendored once for XLIFF and is resolved from there rather than copied.",
+      "bytes": 65477,
+      "digest": {
+        "algorithm": "SHA-256",
+        "encoding": "hex",
+        "value": "9f89777c95be6866317de83852f9fbddd6c48c381a36d8fd9b00e11b864a209f"
+      },
+      "license": {
+        "name": "W3C Software and Document Notice and License",
+        "url": "https://www.w3.org/copyright/software-license/"
+      }
+    },
+    "atlasSitemapHreflangImport": {
+      "publisher": "Atlas",
+      "projectSnapshot": "data/sitemaps-0.9-schemas/atlas-sitemap-hreflang.xsd",
+      "role": "Atlas's own file, recorded here so the directory has no unaccounted member. It imports the sitemap namespace and the XHTML namespace and declares nothing, because a validator needs the second namespace imported rather than merely available. Measured: `xhtml:link` against sitemap.xsd alone is refused by the strict wildcard, and preloading the XHTML schema does not change that. A sitemap index is validated against siteindex.xsd directly, since the two sitemap schemas share a namespace and a repeated import of one namespace is skipped.",
+      "bytes": 1749,
+      "digest": {
+        "algorithm": "SHA-256",
+        "encoding": "hex",
+        "value": "5a302a0a4a1eccbbc8d1dfd63d789e35160b6fc46a7f38abab7b5f43d3d14806"
+      },
+      "license": {
+        "name": "Part of Atlas, under the repository license"
+      }
+    }
+  },
+  "normativeDocuments": {
+    "unicode": "https://www.unicode.org/versions/Unicode17.0.0/",
+    "messageFormat": "https://www.unicode.org/reports/tr35/tr35-78/tr35-messageFormat.html",
+    "xliffCore": "https://docs.oasis-open.org/xliff/xliff-core/v2.2/cs01/xliff-core-v2.2-cs01-part1.html",
+    "xliffExtended": "https://docs.oasis-open.org/xliff/xliff-core/v2.2/cs01/xliff-extended-v2.2-cs01-part2.html",
+    "sitemapProtocol": "https://www.sitemaps.org/protocol.html",
+    "sitemapHreflang": "https://developers.google.com/search/docs/specialty/international/localized-versions"
+  }
+}

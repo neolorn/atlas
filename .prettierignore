@@ -1,0 +1,21 @@
+dist/
+node_modules/
+tmp/
+pnpm-lock.yaml
+**/atlas.config.json
+
+# Vendored normative sources are the publisher's own bytes and carry recorded digests.
+# Formatting them would rewrite 766 files and invalidate every one, and
+# `verify:standards-sources` would then fail on a tree nobody meant to change.
+standards/data/
+
+# The README consumer's scaffold is what `ng new` wrote, with the application it scaffolds removed
+# so that everything the application is comes from the READMEs. Formatting it would make it Atlas's
+# file, and the whole of its value is that it is not: a reader's project starts as the Angular CLI
+# leaves it, and this stage has to start there too.
+fixtures/document-consumer-scaffold/
+# The Contributor Covenant is adopted, not authored. It is reproduced as its stewards publish it,
+# with the reporting means filled in as the document instructs, and formatting it here would rewrap
+# its paragraphs and renumber its enforcement ladder. A code of conduct that has been edited is one
+# a reader has to compare against the original to trust.
+CODE_OF_CONDUCT.md

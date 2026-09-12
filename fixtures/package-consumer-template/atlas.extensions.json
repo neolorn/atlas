@@ -1,0 +1,48 @@
+{
+  "profile": "atlas-extension-registry/1",
+  "descriptors": [
+    {
+      "kind": "message-function",
+      "id": "feature:uppercase",
+      "operandType": "string",
+      "options": {
+        "emphasis": {
+          "type": "string",
+          "values": ["loud", "plain"]
+        }
+      },
+      "resultType": "string",
+      "selector": "none",
+      "maximumOutputLength": 128
+    },
+    {
+      "kind": "identifier-segment",
+      "id": "feature:state",
+      "syntax": "lower-kebab",
+      "maximumLength": 24
+    },
+    {
+      "kind": "rich-slot-kind",
+      "id": "feature:badge",
+      "shape": "paired",
+      "interactive": false,
+      "textProjection": "binding-required",
+      "options": {
+        "tone": ["info", "warning"]
+      }
+    },
+    {
+      "kind": "formatting-adapter",
+      "id": "feature:sku-format",
+      "inputType": "feature:sku",
+      "result": "text",
+      "maximumOutputLength": 64
+    },
+    {
+      "kind": "parsing-adapter",
+      "id": "feature:sku-parse",
+      "outputType": "feature:sku",
+      "maximumInputLength": 64
+    }
+  ]
+}

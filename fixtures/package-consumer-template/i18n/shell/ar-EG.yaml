@@ -1,0 +1,93 @@
+messages:
+  app-title: مختبر ميزات Atlas
+  welcome: 'مرحبًا، {$name}!'
+  learn-more:
+    message: 'اقرأ {#strong}الدليل{/strong}.'
+  help-link:
+    message: 'افتح {#link}الدعم{/link}.'
+  continue-action:
+    message: 'اختر {#action}متابعة{/action}.'
+  unsafe-literal: '<img src=x onerror=alert(1)> يظل نصًا خاملاً.'
+  recovery.unavailable: الترجمة غير متاحة مؤقتًا.
+  document.title: مختبر ميزات Atlas
+  document.description: مختبر وقت تشغيل الترجمة في Atlas.
+  document.second.title: العنوان الثاني
+  document.second.description: عنوان ثانٍ، لإثبات أن بيانات كل صفحة خاصة بها.
+  document.item.title: تفاصيل العنصر
+  document.item.description: عنصر واحد، بعنوان مترجم.
+  document.lazy.title: صفحة محمّلة عند الطلب
+  document.lazy.description: صفحة يصل مكوّنها وفهرسها معًا.
+  document.topic.title: الموضوع
+  document.topic.description: موضوع واحد، بعنوان مترجم.
+  document.dossier.title: ملف
+  document.dossier.description: ملف واحد، عنوانه في كل لغة مخزَّن معه.
+  social.image-alt: بطاقة معاينة مختبر ميزات Atlas
+  route.home: الصفحة الرئيسية
+  route.second: الصفحة الثانية
+  route.item: صفحة العنصر
+  route.open-second: افتح الصفحة الثانية
+  route.open-item: افتح العنصر 42
+  route.return-home: عُد إلى الصفحة الرئيسية
+  issue.unknown: حدث خطأ ما.
+  issue.required: هذه القيمة مطلوبة.
+  issue.insufficient-stock: لا يوجد مخزون كافٍ.
+  issue.legacy-outage: الخدمة غير متاحة.
+  external.ready: جاهز
+  notification.saved: تم حفظ التغييرات.
+  incremental.ready: حد الترجمة التدريجي جاهز.
+  incremental.action: فعّل الحد التدريجي
+  extension.uppercase: 'دالة مخصصة: {$name :feature:uppercase emphasis=loud}'
+  extension.badge: '{#badge tone=info}جديد{/badge}'
+  feature-state.ready: حالة الميزة جاهزة
+  feature-state.pending: حالة الميزة قيد الانتظار
+  asset.alt: غلاف دليل Atlas
+  control.retry: إعادة المحاولة
+  control.submit: إرسال
+  counter.label: العدد
+  dynamic.hide: إخفاء
+  dynamic.retain: احتفظ بالمحتوى
+  dynamic.retry: إعادة محاولة المنطقة
+  dynamic.skeleton: هيكل مؤقت
+  dynamic.substitute: بديل
+  form.percent-label: النسبة المئوية
+  locale.progressive: العربية تدريجيًا
+  scope.load: تحميل النطاق الكسول
+  scope.not-loaded: لم يتم التحميل
+  plural.items: |-
+    .input {$count :number}
+    .match $count
+    zero {{لا عناصر}}
+    one {{عنصر واحد}}
+    two {{عنصران}}
+    few {{{$count :number} عناصر}}
+    many {{{$count :number} عنصرًا}}
+    * {{{$count :number} عنصر}}
+  plural.nested: |-
+    .input {$count :number}
+    .input {$kind :string}
+    .match $kind $count
+    box zero {{لا صناديق}}
+    box one {{صندوق واحد}}
+    box two {{صندوقان}}
+    box few {{{$count :number} صناديق}}
+    box many {{{$count :number} صندوقًا}}
+    box * {{{$count :number} صندوق}}
+    * zero {{لا وحدات}}
+    * one {{وحدة واحدة}}
+    * two {{وحدتان}}
+    * few {{{$count :number} وحدات}}
+    * many {{{$count :number} وحدة}}
+    * * {{{$count :number} وحدة}}
+  hostile.authored-isolate: "مرجع \u2066ABC\u2069 تمام"
+  hostile.authored-mark: "الإجمالي \u200F42 مستحق"
+  hostile.authored-invisible: "رمز\u200BA\u2060B"
+  hostile.interpolated: 'الطلب {$reference} تم شحنه'
+  hostile.rich: 'الطلب {#strong}{$reference}{/strong} تم شحنه'
+  fmt.number: 'العدد {$v :number}'
+  fmt.integer: 'العناصر {$v :integer}'
+  fmt.percent: 'النسبة {$v :percent}'
+  fmt.currency: 'السعر {$v :currency currency=EGP}'
+  fmt.unit: 'المقاس {$v :unit unit=meter}'
+  fmt.date: 'في {$v :date}'
+  fmt.time: 'الساعة {$v :time}'
+  fmt.datetime: 'بتاريخ {$v :datetime}'

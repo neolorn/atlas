@@ -1,0 +1,5 @@
+messages:
+  title: مستهلك Atlas المصغر
+  welcome: 'مرحبًا، {$name}!'
+  guide: 'اقرأ {#strong}الدليل{/strong}.'
+  recovery.unavailable: الترجمة غير متاحة مؤقتًا.

@@ -1,0 +1,11 @@
+autoInstallPeers: false
+strictPeerDependencies: true
+savePrefix: ''
+nodeVersion: 24.18.0
+engineStrict: true
+
+allowBuilds:
+  '@parcel/watcher': true
+  esbuild: true
+  lmdb: true
+  msgpackr-extract: true

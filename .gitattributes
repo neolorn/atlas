@@ -1,0 +1,22 @@
+# Line endings are the repository's to decide, not each machine's.
+#
+# Every text file here is stored and checked out with LF. Without this line that depended on each
+# contributor having `core.autocrlf=input` set, which is a setting on a machine rather than a
+# property of the repository: a clone on a default Windows install would check out CRLF, and the
+# first commit from it would rewrite whole files as line ending changes.
+#
+# `text=auto` rather than `text`, so Git still decides per file. One test file carries NUL bytes on
+# purpose and is detected as binary; forcing every path to text would rewrite it.
+* text=auto eol=lf
+
+# Vendored normative sources are byte-exact, and Git must not touch them.
+#
+# `standards/sources.lock.json` records a SHA-256 of every file under `standards/data/`, and seven
+# of the XLIFF 2.2 schemas are published with CRLF endings. This repository runs with
+# `core.autocrlf=input`, so without the line below those seven would be normalized to LF on the way
+# into the object store: the working copy that recorded the digests would go on verifying, and
+# every fresh clone would fail. A provenance record that only holds on the machine that wrote it is
+# not a provenance record.
+#
+# `-text` rather than `binary`, so the files still diff as text when one of them is replaced.
+standards/data/** -text

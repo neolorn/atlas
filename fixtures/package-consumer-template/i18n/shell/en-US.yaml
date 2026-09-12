@@ -1,0 +1,90 @@
+messages:
+  app-title: Atlas feature lab
+  welcome: 'Welcome, {$name}!'
+  learn-more:
+    message: 'Read the {#strong}guide{/strong}.'
+  help-link:
+    message: 'Open {#link}support{/link}.'
+  continue-action:
+    message: 'Choose {#action}continue{/action}.'
+  source-only: Source fallback remains truthful.
+  unsafe-literal: '<img src=x onerror=alert(1)> remains inert text.'
+  recovery.unavailable: Localization is temporarily unavailable.
+  document.title: Atlas feature lab
+  document.description: Atlas localization runtime feature laboratory.
+  document.second.title: Second address
+  document.second.description: A second address, to prove one route's metadata is its own.
+  document.item.title: Item detail
+  document.item.description: One item, addressed by a localized parameter.
+  document.lazy.title: Lazily loaded route
+  document.lazy.description: A route whose component and catalog arrive together.
+  document.topic.title: Topic
+  document.topic.description: One topic, addressed by a localized parameter.
+  document.dossier.title: Dossier
+  document.dossier.description: One dossier, whose address in each language is stored with it.
+  social.image-alt: The Atlas feature lab preview card
+  route.home: Home route
+  route.second: Second route
+  route.item: Item route
+  route.open-second: Open second route
+  route.open-item: Open item 42
+  route.return-home: Return home
+  issue.unknown: Something went wrong.
+  issue.required: This value is required.
+  issue.insufficient-stock: Not enough left in stock.
+  issue.legacy-outage: The service is unavailable.
+  external.ready: Ready
+  notification.saved: Changes saved.
+  incremental.ready: Incremental localization boundary ready.
+  incremental.action: Activate incremental boundary
+  extension.uppercase: 'Custom function: {$name :feature:uppercase emphasis=loud}'
+  extension.badge:
+    message: '{#badge tone=info}New{/badge}'
+    slots:
+      badge: feature:badge
+  feature-state.ready: Feature state ready
+  feature-state.pending: Feature state pending
+  asset.alt: Atlas handbook cover
+  control.retry: Retry
+  control.submit: Submit
+  counter.label: count
+  dynamic.hide: Hide
+  dynamic.retain: Retain
+  dynamic.retry: Retry region
+  dynamic.skeleton: Skeleton
+  dynamic.substitute: Substitute
+  form.percent-label: Percentage
+  locale.progressive: Progressive Arabic
+  scope.load: Load lazy scope
+  scope.not-loaded: Not loaded
+  plural.items: |-
+    .input {$count :number}
+    .match $count
+    one {{{$count :number} item}}
+    * {{{$count :number} items}}
+  plural.nested: |-
+    .input {$count :number}
+    .input {$kind :string}
+    .match $kind $count
+    box one {{{$count :number} box}}
+    box * {{{$count :number} boxes}}
+    * one {{{$count :number} unit}}
+    * * {{{$count :number} units}}
+  hostile.authored-isolate: "Ref \u2066ABC\u2069 ok"
+  hostile.authored-mark: "Total \u200F42 due"
+  hostile.authored-invisible: "SKU\u200BA\u2060B"
+  hostile.interpolated: 'Order {$reference} shipped'
+  hostile.rich: 'Order {#strong}{$reference}{/strong} shipped'
+  fmt.number: 'Count {$v :number}'
+  fmt.integer: 'Items {$v :integer}'
+  fmt.percent: 'Share {$v :percent}'
+  fmt.currency: 'Price {$v :currency currency=EGP}'
+  fmt.unit: 'Size {$v :unit unit=meter}'
+  fmt.date: 'On {$v :date}'
+  fmt.time: 'At {$v :time}'
+  fmt.datetime: 'When {$v :datetime}'
+families:
+  feature-state:
+    template: 'feature-state.{state}'
+    segments:
+      state: feature:state

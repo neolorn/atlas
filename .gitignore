@@ -1,0 +1,18 @@
+node_modules/
+dist/
+.angular/
+.atlas/
+# Where the gate writes its work trees, the consumers it materializes, its traces and its attempt
+# ledger. Large, specific to one machine, and rebuilt by the next run.
+tmp/
+# The archives a publish sends, packed from the build and compared against it file by file. They
+# are output rather than source, and they are reproduced by running the gate again.
+release/
+coverage/
+playwright-report/
+test-results/
+.runtimes/
+**/src/generated/i18n/
+# One editor's project state, on one machine. The gate refuses a tree with anything uncommitted in
+# it, so an editor writing here would otherwise stop a run.
+.idea/

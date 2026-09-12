@@ -1,0 +1,45 @@
+# A request for something Atlas does not do.
+#
+# The third field decides most of these. A capability that only makes sense for one application
+# belongs in that application, and asking before anyone writes code is cheaper than finding it out
+# in review.
+name: Capability request
+description: Something you need Atlas to do that it does not do yet.
+body:
+  - type: textarea
+    id: what-you-are-trying-to-do
+    attributes:
+      label: What you are trying to do
+      description: The task, rather than the API you have in mind for it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-you-do-today
+    attributes:
+      label: What you do today instead
+      description: >-
+        The workaround, if there is one, and what it costs you. A request with no workaround and a
+        request that saves three lines are weighed differently.
+    validations:
+      required: true
+
+  - type: textarea
+    id: why-atlas
+    attributes:
+      label: Why this belongs in Atlas
+      description: >-
+        Say whether this would be right for every application that localizes, or only for yours. If
+        it depends on your routes, your content, or your business rules, describe what Atlas would
+        need to know about them.
+    validations:
+      required: true
+
+  - type: input
+    id: atlas-version
+    attributes:
+      label: Atlas version
+      description: The version you are on, so the answer is about the code you have.
+      placeholder: 1.0.0-alpha.3
+    validations:
+      required: true

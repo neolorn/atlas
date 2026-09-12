@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Atlas's own file. Nobody publishes this one, and it is recorded as ours in standards/README.md.
+
+  Every content model in sitemap.xsd and siteindex.xsd ends with
+
+    <xsd:any namespace="##other" minOccurs="0" maxOccurs="unbounded" processContents="strict"/>
+
+  and the hreflang extension puts <xhtml:link> in exactly that position. `strict` means a validator
+  has to find a global element declaration for a foreign element or the document is invalid, so a
+  sitemap carrying alternates, validated against sitemap.xsd on its own, is reported as:
+
+    Element '{http://www.w3.org/1999/xhtml}link': No matching global element declaration
+    available, but demanded by the strict wildcard.
+
+  Making the XHTML schema merely findable does not answer that. The validator needs the namespace
+  imported into the schema set it compiled, which is what this file is and all that it is. It
+  declares no element, no type and no constraint, and it exists only because the protocol and the
+  extension come from two publishers, so neither published schema imports the other.
+
+  An index file is validated against siteindex.xsd directly rather than through this. It carries no
+  foreign element, so it needs no import, and it could not have one anyway: siteindex.xsd and
+  sitemap.xsd share a target namespace, and a second import of a namespace already imported is
+  skipped, which was measured rather than assumed.
+-->
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <xsd:import namespace="http://www.sitemaps.org/schemas/sitemap/0.9"
+              schemaLocation="sitemap.xsd"/>
+  <xsd:import namespace="http://www.w3.org/1999/xhtml"
+              schemaLocation="xhtml1-strict.xsd"/>
+</xsd:schema>

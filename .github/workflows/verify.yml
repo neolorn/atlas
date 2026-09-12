@@ -1,0 +1,111 @@
+# The gate, on Linux.
+#
+# `node tools/verify.mjs` is the whole of it. The stage graph, the ordering, the concurrency and the
+# verdict are the ones in the repository; nothing about the run is described twice, and a stage
+# added to `tools/verify.mjs` is in this job the moment it lands, with no edit here.
+#
+# What this job does that the local gate does not is run on a different operating system. Atlas has
+# only ever been verified on Windows, and the tooling carries twenty-eight `process.platform`
+# branches whose other half has never executed. Anything this finds is a defect in the thing it
+# names (a path joined with a backslash, a line ending assumed, a store location hard-coded)
+# and belongs fixed there rather than worked around in this file.
+name: verify
+
+# Dispatch and pull requests, and nothing automatic. The included minutes are one pool shared by
+# every private repository on the account, so minutes spent here are minutes another repository
+# does not have. That makes the runner something to consult deliberately, before a release or on a
+# change worth a second operating system, rather than something that answers every commit. Every
+# commit is gate-green locally before it is pushed, so what the runner adds is Linux, not a second
+# opinion on the same stages.
+on:
+  workflow_dispatch:
+  pull_request:
+
+# One run per branch, and a newer run supersedes one still going: a superseded run proves a commit
+# nobody is looking at any more, and this is billed by the minute.
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    # Measured on the first green run rather than estimated: 2,403 seconds of gate wall over 3,497
+    # seconds of stage time at `peak 2 of 2 concurrent`, and 42 minutes of billed job once the
+    # engines, the Node builds and the two installs are counted. The same gate is 718 seconds
+    # locally over 1,451 at a peak of 15 of 32. The runner is not slower per unit of work; it has
+    # two cores where that machine has thirty-two, so the serial part arrives whole. The limit is
+    # high because a slow green is a result and a killed run is not.
+    timeout-minutes: 180
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .node-version
+
+      # `packageManager` in package.json is the pin, and it is the only place the version is
+      # written. Installed rather than activated through Corepack, which Node no longer ships in
+      # every line Atlas supports.
+      - name: Install pnpm
+        run: |
+          version="$(node -p "require('./package.json').packageManager.split('@')[1]")"
+          npm install --global "pnpm@${version}"
+          pnpm --version
+
+      - name: Locate the pnpm store
+        id: store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v6
+        with:
+          path: ${{ steps.store.outputs.path }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'fixtures/**/pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      - run: pnpm install --frozen-lockfile
+
+      # Three engines, at the version the lockfile pins. `--with-deps` installs the system
+      # libraries WebKit and Firefox need, which a hosted runner does not carry.
+      - name: Cache the browser engines
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+
+      - run: pnpm exec playwright install --with-deps chromium firefox webkit
+
+      # `verify:node-compatibility` downloads nothing itself, on purpose: a verifier that fetches
+      # its own subject can pass by fetching the wrong one. The staging step checks each archive
+      # against nodejs.org's published SHASUMS256 before it unpacks it.
+      - name: Cache the pinned Node builds
+        uses: actions/cache@v6
+        with:
+          path: .runtimes/node
+          key: node-runtimes-${{ runner.os }}-${{ hashFiles('tools/stage-node-runtimes.mjs') }}
+
+      - run: pnpm run stage:node-runtimes
+
+      # The consumer stages install `--offline --frozen-lockfile`, so every package their
+      # committed lockfiles name has to be in the store before the gate starts. The workspace
+      # install does not put it there: the two resolve different versions of the same
+      # transitives, and this is what found that out.
+      - run: pnpm run stage:consumer-store
+
+      - name: Gate
+        run: node tools/verify.mjs
+
+      # The per-stage logs and traces the run wrote. They are what a red verdict is diagnosed from,
+      # and on a hosted runner there is nothing else left to look at.
+      - name: Keep the run's logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: verify-run-${{ github.run_id }}
+          path: tmp/verify-run
+          if-no-files-found: warn
+          retention-days: 14

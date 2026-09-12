@@ -1,0 +1,9 @@
+# Who is asked to review a change.
+#
+# One entry, because there is one maintainer. A file listing owners per directory would describe a
+# team that does not exist, and every path would resolve to the same person anyway.
+#
+# This asks for a review. It does not grant or withhold anything: what may be committed, pushed,
+# published or rewritten is decided elsewhere, and a pattern in this file cannot widen it.
+
+* @neolorn

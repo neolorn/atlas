@@ -1,0 +1,67 @@
+{
+  "name": "@neolorn/atlas",
+  "version": "1.0.0-rc.2",
+  "description": "Localization runtime for Angular applications.",
+  "homepage": "https://github.com/neolorn/atlas/tree/main/packages/runtime#readme",
+  "keywords": [
+    "angular",
+    "i18n",
+    "internationalization",
+    "localization",
+    "translation",
+    "locale",
+    "messageformat",
+    "mf2",
+    "icu",
+    "rtl",
+    "bidi",
+    "pluralization",
+    "hreflang",
+    "ssr"
+  ],
+  "type": "module",
+  "license": "MIT",
+  "author": "Hossam Ismail <hossam@neolorn.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/neolorn/atlas.git",
+    "directory": "packages/runtime"
+  },
+  "bugs": {
+    "url": "https://github.com/neolorn/atlas/issues"
+  },
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org",
+    "access": "public"
+  },
+  "sideEffects": false,
+  "engines": {
+    "node": "^22.22.3 || ^24.15.0 || ^26.0.0"
+  },
+  "peerDependencies": {
+    "@angular/common": ">=22.0.0 <23.0.0",
+    "@angular/core": ">=22.0.0 <23.0.0",
+    "@angular/forms": ">=22.0.0 <23.0.0",
+    "@angular/router": ">=22.0.0 <23.0.0",
+    "@angular/ssr": ">=22.0.0 <23.0.0",
+    "rxjs": ">=7.4.0 <8.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@angular/forms": {
+      "optional": true
+    },
+    "@angular/router": {
+      "optional": true
+    },
+    "@angular/ssr": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "tslib": "^2.8.1"
+  },
+  "scripts": {
+    "build": "ng-packagr -p ng-package.json -c tsconfig.lib.prod.json && node ../../tools/stage-package-license.mjs dist/runtime",
+    "build:watch": "ng-packagr -p ng-package.json -c tsconfig.lib.prod.json --watch"
+  }
+}

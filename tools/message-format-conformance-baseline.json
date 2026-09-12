@@ -1,0 +1,542 @@
+{
+  "suite": "message-format-tests-48.2",
+  "capturedOn": "2026-09-03",
+  "note": "Every case the suite holds is expected to pass unless it is listed here. A case that is listed and now passes fails the run just as loudly as one that is not listed and does not: a divergence that was fixed has to leave this file, or the file stops describing anything. There is deliberately no command that writes this file: a baseline something can move for you is one that has only ever been moved in the direction that passes.",
+  "classes": {
+    "input-contract-rejects-operand": {
+      "standing": "design",
+      "reason": "Atlas derives a typed input contract from the message and the runtime enforces it, so a value of the wrong declared type, a missing one, or one the message never declared is refused before evaluation. MessageFormat has no contract to enforce and produces a fallback string with an unresolved-variable or bad-operand error instead. The suite supplies these deliberately (a boolean where a date is wanted, a string where a number is) and Atlas reaching the same conclusion through its type system is the compiled equivalent, not an agreement."
+    },
+    "unregistered-function-refused": {
+      "standing": "design",
+      "reason": "MessageFormat requires an unknown function to produce a fallback string and an unknown-function error at format time. Atlas refuses the message at parse time (ATL1203) because the function profile is closed and known before anything is compiled: a message naming a function nobody implements is a build failure, not a runtime surprise for a reader. Both agree the message is invalid; they disagree about when a consumer finds out, and doing it earlier is the whole point of compiling."
+    },
+    "invalid-number-operand-refused": {
+      "standing": "design",
+      "reason": "The suite writes a literal that is deliberately not a number (`1.e3`, `042`, `0x1`, `+1`, or no operand at all) and expects the message to render a fallback string and report bad-operand while formatting. Atlas refuses it when the catalog is compiled (ATL1205), because a literal operand is knowable then: the same message would reach every reader in every locale, and a build is the last moment anyone can be told. Both agree the message is invalid; they disagree about when its author finds out, which is the disagreement this whole file keeps meeting."
+    },
+    "slot-must-be-paired": {
+      "standing": "design",
+      "reason": "MessageFormat's markup is free-standing: `{#tag}` needs no close and `{/tag}` needs no open, and an unmatched one is not an error. Atlas models markup as a rich slot with a declared shape and refuses an unclosed or unopened one (ATL1303), because a slot is bound to a consumer template and a template cannot be handed half a pair. This is the one class here where the divergence is a modelling decision rather than a timing one, and it deserves its own examination rather than being settled by this file."
+    },
+    "option-must-be-literal": {
+      "standing": "design",
+      "reason": "Atlas requires the `select` option to be a literal written on the expression that selects, and refuses both a variable and an inheritance from the operand (ATL1204), where MessageFormat resolves the first and reports bad-option on the second at format time. Same shape as the unregistered-function class: the value that decides how selection behaves has to be knowable when the plural categories are checked, which happens in the compiler, and a translator opening the message has to be able to see which table it was checked against. The two inheritance cases are refused at parse rather than at render, which is the point: MessageFormat falls back to the catch-all and Atlas will not ship a message that formats its way into one."
+    },
+    "narrower-default-bidi-strategy": {
+      "standing": "design",
+      "reason": "Atlas does not isolate a left-to-right value in a left-to-right message, and MessageFormat's Default Bidi Strategy does. The rationale is recorded on `isolatedValueText`: an isolate is visible to every string comparison a consumer writes, unlike the `<bdi>` element it stands in for, and isolating where isolation changes nothing costs every assertion in a wholly English application. Atlas isolates on the direction of the value rather than on the presence of a placeholder. The position is deliberate and it is a position rather than a proof: these eight cases are what it costs, stated rather than implied."
+    },
+    "date-time-operand-rejected": {
+      "standing": "design",
+      "reason": "A date function with no operand, or with an operand that is not a date, is refused at evaluation rather than formatted as a fallback. Same disagreement about output as the contract class above, reached inside the function rather than at the boundary."
+    },
+    "unbalanced-isolate-refused": {
+      "standing": "design",
+      "reason": "The suite writes a lone U+2066..U+2069 into message syntax to prove the parser treats it as ordinary content. Atlas refuses the catalog before parsing gets there (ATL1103): an isolate opened and never closed reorders every line after it in a translator tool, and the guard is on the authored file rather than on the message. The guard is right about authored catalogs and the suite is right about the grammar; they are checking different things."
+    },
+    "non-selector-refused": {
+      "standing": "design",
+      "reason": "MessageFormat divides its functions into formatters and selectors, and requires a `.match` over a formatter to report bad-selector and then continue with only the catch-all reachable. Atlas refuses the message when the catalog is compiled (ATL1206). Same shape as the unregistered-function class: which functions select is closed and known before anything runs (`:currency`, `:unit` and the three date functions format only, and an extension says so in its descriptor) so a `.match` over one is a build error, not a render-time report. What the suite asks for here is worse than silence in Atlas: the three cases were accepted, and because one numeric factory serves all six numeric functions, `:currency` and `:unit` inherited numeric selection and picked keyed variants. `.match {42 :currency currency=EUR} 42 {{keyed}} * {{other}}` rendered \"keyed\". Every keyed variant an author writes under a formatter is unreachable by the standard and was silently reachable here, which is why this is a refusal rather than a recorded output difference."
+    },
+    "empty-message-unrepresentable": {
+      "standing": "gap",
+      "reason": "The empty message is valid MessageFormat and formats to the empty string. An Atlas catalog cannot say it: the schema requires a message to be at least one character, and the `empty` message kind means something else. A message awaiting translation, not a message that is deliberately blank. One case, and a real hole in what a catalog can express rather than a difference of opinion about it."
+    },
+    "isolation-of-undetermined-content": {
+      "standing": "design",
+      "reason": "The mirror image of the class above, and the reason the two are recorded separately. Where the value's direction cannot be determined Atlas isolates with FSI so the renderer's first-strong rule decides, and it does so even where the suite asked for no isolation at all. Atlas has no switch that turns the strategy off, deliberately, bidi safety is not a per-call option, so `bidiIsolation: none` is a mode this runner cannot request."
+    },
+    "unknown-option-refused": {
+      "standing": "design",
+      "reason": "An option name a function does not define is refused rather than ignored. LDML 48 leaves this open, both Bad Option and Unsupported Operation are defined as implementation-defined, and MessageFormat formats the message with the unknown option dropped. Atlas already made this choice one level up: ATL1203 refuses `:foo` rather than ignoring the annotation, and an unrecognized option on a recognized function is the same mistake one step smaller. Ignoring it means an author writes something, gets no answer, and finds out from a reader. The cost is forward compatibility, a catalog written against a later option table will not compile here, and that is the right way round for a compiler whose profile is versioned with the runtime that reads it."
+    },
+    "closed-option-domain-refused": {
+      "standing": "design",
+      "reason": "A descriptor may close an option to a set of values, and a message writing one outside it is refused when the catalog is compiled (ATL1805) rather than reported while formatting. The two cases write `decimalPlaces=9` where the suite's own README says only `0` and `1` are valid, and expect MessageFormat's answer: bad-option, then bad-selector, then the catch-all rendered. Same reasoning as the unknown-option class beside this one, one step further in: an option name a function never declared and an option value it declared as impossible are both knowable from the descriptor and the message alone, with no locale, no input and no request involved. The difference is that this set is Atlas's own construct: MessageFormat has no way for a function to publish its option domain, so an implementation that wants the check has to invent the declaration, and having invented it there is no reason to defer enforcing it to the moment a reader is already looking at the screen. Both cases were excluded until 3.16 and neither was excluded for this: `decimalPlaces` could not be spelled in a descriptor at all, and once it could, the case ran and produced this."
+    }
+  },
+  "cases": {
+    "bidi.json#1": {
+      "class": "narrower-default-bidi-strategy",
+      "verdict": "mismatch",
+      "actual": " 1"
+    },
+    "bidi.json#14": {
+      "class": "narrower-default-bidi-strategy",
+      "verdict": "mismatch",
+      "actual": "hello"
+    },
+    "bidi.json#15": {
+      "class": "narrower-default-bidi-strategy",
+      "verdict": "mismatch",
+      "actual": " 1 "
+    },
+    "bidi.json#17": {
+      "class": "slot-must-be-paired",
+      "verdict": "refused"
+    },
+    "bidi.json#18": {
+      "class": "slot-must-be-paired",
+      "verdict": "refused"
+    },
+    "bidi.json#2": {
+      "class": "narrower-default-bidi-strategy",
+      "verdict": "mismatch",
+      "actual": " 1"
+    },
+    "bidi.json#21": {
+      "class": "narrower-default-bidi-strategy",
+      "verdict": "mismatch",
+      "actual": " 1 "
+    },
+    "bidi.json#23": {
+      "class": "narrower-default-bidi-strategy",
+      "verdict": "mismatch",
+      "actual": "3"
+    },
+    "bidi.json#24": {
+      "class": "narrower-default-bidi-strategy",
+      "verdict": "mismatch",
+      "actual": "4"
+    },
+    "bidi.json#25": {
+      "class": "narrower-default-bidi-strategy",
+      "verdict": "mismatch",
+      "actual": "5"
+    },
+    "bidi.json#3": {
+      "class": "unbalanced-isolate-refused",
+      "verdict": "refused"
+    },
+    "bidi.json#4": {
+      "class": "unbalanced-isolate-refused",
+      "verdict": "refused"
+    },
+    "bidi.json#6": {
+      "class": "unbalanced-isolate-refused",
+      "verdict": "refused"
+    },
+    "bidi.json#7": {
+      "class": "unbalanced-isolate-refused",
+      "verdict": "refused"
+    },
+    "bidi.json#8": {
+      "class": "unbalanced-isolate-refused",
+      "verdict": "refused"
+    },
+    "fallback.json#2": {
+      "class": "input-contract-rejects-operand",
+      "verdict": "refused-with-expected-output"
+    },
+    "fallback.json#3": {
+      "class": "input-contract-rejects-operand",
+      "verdict": "refused-with-expected-output"
+    },
+    "fallback.json#4": {
+      "class": "unregistered-function-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "fallback.json#5": {
+      "class": "unregistered-function-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "fallback.json#6": {
+      "class": "unregistered-function-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "fallback.json#7": {
+      "class": "unregistered-function-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/currency.json#11": {
+      "class": "non-selector-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/date.json#0": {
+      "class": "date-time-operand-rejected",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/date.json#1": {
+      "class": "date-time-operand-rejected",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/datetime.json#0": {
+      "class": "date-time-operand-rejected",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/datetime.json#1": {
+      "class": "input-contract-rejects-operand",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/datetime.json#2": {
+      "class": "date-time-operand-rejected",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/integer.json#11": {
+      "class": "option-must-be-literal",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/integer.json#12": {
+      "class": "option-must-be-literal",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/integer.json#4": {
+      "class": "input-contract-rejects-operand",
+      "verdict": "refused"
+    },
+    "functions/integer.json#5": {
+      "class": "input-contract-rejects-operand",
+      "verdict": "refused"
+    },
+    "functions/integer.json#8": {
+      "class": "option-must-be-literal",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/integer.json#9": {
+      "class": "option-must-be-literal",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/number.json#10": {
+      "class": "invalid-number-operand-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/number.json#11": {
+      "class": "invalid-number-operand-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/number.json#12": {
+      "class": "invalid-number-operand-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/number.json#13": {
+      "class": "invalid-number-operand-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/number.json#14": {
+      "class": "invalid-number-operand-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/number.json#15": {
+      "class": "invalid-number-operand-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/number.json#16": {
+      "class": "invalid-number-operand-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/number.json#17": {
+      "class": "invalid-number-operand-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/number.json#18": {
+      "class": "invalid-number-operand-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/number.json#19": {
+      "class": "invalid-number-operand-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/number.json#20": {
+      "class": "invalid-number-operand-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/number.json#21": {
+      "class": "invalid-number-operand-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/number.json#24": {
+      "class": "input-contract-rejects-operand",
+      "verdict": "refused"
+    },
+    "functions/number.json#29": {
+      "class": "input-contract-rejects-operand",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/number.json#33": {
+      "class": "input-contract-rejects-operand",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/number.json#35": {
+      "class": "option-must-be-literal",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/number.json#36": {
+      "class": "option-must-be-literal",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/number.json#38": {
+      "class": "option-must-be-literal",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/number.json#39": {
+      "class": "option-must-be-literal",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/number.json#4": {
+      "class": "invalid-number-operand-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/number.json#5": {
+      "class": "invalid-number-operand-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/number.json#6": {
+      "class": "invalid-number-operand-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/number.json#7": {
+      "class": "invalid-number-operand-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/number.json#8": {
+      "class": "invalid-number-operand-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/number.json#9": {
+      "class": "invalid-number-operand-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/offset.json#9": {
+      "class": "unknown-option-refused",
+      "verdict": "refused"
+    },
+    "functions/percent.json#0": {
+      "class": "invalid-number-operand-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/percent.json#1": {
+      "class": "invalid-number-operand-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/string.json#3": {
+      "class": "input-contract-rejects-operand",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/time.json#0": {
+      "class": "date-time-operand-rejected",
+      "verdict": "refused-with-expected-output"
+    },
+    "functions/time.json#1": {
+      "class": "date-time-operand-rejected",
+      "verdict": "refused-with-expected-output"
+    },
+    "pattern-selection.json#11": {
+      "class": "closed-option-domain-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "pattern-selection.json#14": {
+      "class": "non-selector-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "pattern-selection.json#15": {
+      "class": "input-contract-rejects-operand",
+      "verdict": "refused-with-expected-output"
+    },
+    "pattern-selection.json#21": {
+      "class": "non-selector-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "pattern-selection.json#8": {
+      "class": "closed-option-domain-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "syntax.json#0": {
+      "class": "empty-message-unrepresentable",
+      "verdict": "refused"
+    },
+    "syntax.json#10": {
+      "class": "input-contract-rejects-operand",
+      "verdict": "refused-with-expected-output"
+    },
+    "syntax.json#100": {
+      "class": "slot-must-be-paired",
+      "verdict": "refused"
+    },
+    "syntax.json#102": {
+      "class": "slot-must-be-paired",
+      "verdict": "refused"
+    },
+    "syntax.json#104": {
+      "class": "slot-must-be-paired",
+      "verdict": "refused"
+    },
+    "syntax.json#12": {
+      "class": "unregistered-function-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "syntax.json#13": {
+      "class": "unregistered-function-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "syntax.json#14": {
+      "class": "input-contract-rejects-operand",
+      "verdict": "refused-with-expected-output"
+    },
+    "syntax.json#15": {
+      "class": "unregistered-function-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "syntax.json#16": {
+      "class": "unregistered-function-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "syntax.json#17": {
+      "class": "unregistered-function-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "syntax.json#18": {
+      "class": "unregistered-function-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "syntax.json#20": {
+      "class": "slot-must-be-paired",
+      "verdict": "refused"
+    },
+    "syntax.json#21": {
+      "class": "input-contract-rejects-operand",
+      "verdict": "refused"
+    },
+    "syntax.json#22": {
+      "class": "input-contract-rejects-operand",
+      "verdict": "refused"
+    },
+    "syntax.json#23": {
+      "class": "input-contract-rejects-operand",
+      "verdict": "refused"
+    },
+    "syntax.json#24": {
+      "class": "input-contract-rejects-operand",
+      "verdict": "refused"
+    },
+    "syntax.json#26": {
+      "class": "input-contract-rejects-operand",
+      "verdict": "refused"
+    },
+    "syntax.json#27": {
+      "class": "unregistered-function-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "syntax.json#28": {
+      "class": "input-contract-rejects-operand",
+      "verdict": "refused"
+    },
+    "syntax.json#34": {
+      "class": "unregistered-function-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "syntax.json#35": {
+      "class": "unregistered-function-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "syntax.json#36": {
+      "class": "unregistered-function-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "syntax.json#37": {
+      "class": "unregistered-function-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "syntax.json#38": {
+      "class": "unregistered-function-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "syntax.json#42": {
+      "class": "input-contract-rejects-operand",
+      "verdict": "refused-with-expected-output"
+    },
+    "syntax.json#43": {
+      "class": "input-contract-rejects-operand",
+      "verdict": "refused-with-expected-output"
+    },
+    "syntax.json#44": {
+      "class": "input-contract-rejects-operand",
+      "verdict": "refused-with-expected-output"
+    },
+    "syntax.json#45": {
+      "class": "unregistered-function-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "syntax.json#46": {
+      "class": "unregistered-function-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "syntax.json#47": {
+      "class": "unregistered-function-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "syntax.json#48": {
+      "class": "slot-must-be-paired",
+      "verdict": "refused"
+    },
+    "syntax.json#49": {
+      "class": "slot-must-be-paired",
+      "verdict": "refused"
+    },
+    "syntax.json#50": {
+      "class": "slot-must-be-paired",
+      "verdict": "refused"
+    },
+    "syntax.json#51": {
+      "class": "slot-must-be-paired",
+      "verdict": "refused"
+    },
+    "syntax.json#53": {
+      "class": "slot-must-be-paired",
+      "verdict": "refused"
+    },
+    "syntax.json#54": {
+      "class": "slot-must-be-paired",
+      "verdict": "refused"
+    },
+    "syntax.json#55": {
+      "class": "slot-must-be-paired",
+      "verdict": "refused"
+    },
+    "syntax.json#56": {
+      "class": "slot-must-be-paired",
+      "verdict": "refused"
+    },
+    "syntax.json#57": {
+      "class": "unregistered-function-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "syntax.json#58": {
+      "class": "unregistered-function-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "syntax.json#59": {
+      "class": "unregistered-function-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "syntax.json#60": {
+      "class": "unregistered-function-refused",
+      "verdict": "refused-with-expected-output"
+    },
+    "syntax.json#86": {
+      "class": "isolation-of-undetermined-content",
+      "verdict": "mismatch",
+      "actual": "⁨¡؝ᚁ​‐‰⁠⁪、ﷰ⁩"
+    },
+    "syntax.json#89": {
+      "class": "input-contract-rejects-operand",
+      "verdict": "refused"
+    },
+    "syntax.json#90": {
+      "class": "input-contract-rejects-operand",
+      "verdict": "refused"
+    },
+    "syntax.json#93": {
+      "class": "input-contract-rejects-operand",
+      "verdict": "refused"
+    },
+    "u-options.json#0": {
+      "class": "slot-must-be-paired",
+      "verdict": "refused"
+    },
+    "u-options.json#1": {
+      "class": "option-must-be-literal",
+      "verdict": "refused-with-expected-output"
+    }
+  }
+}

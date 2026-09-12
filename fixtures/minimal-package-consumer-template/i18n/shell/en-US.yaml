@@ -1,0 +1,6 @@
+messages:
+  title: Atlas minimal consumer
+  welcome: 'Welcome, {$name}!'
+  guide: 'Read the {#strong}guide{/strong}.'
+  recovery.unavailable: Localization is temporarily unavailable.
+  inherited: This sentence is written in the source locale.

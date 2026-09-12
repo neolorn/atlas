@@ -1,0 +1,11 @@
+<h1>{{ messages.title }}</h1>
+
+@if (showLink) {
+  <a href="/about">{{ messages.about }}</a>
+}
+
+@defer (on idle) {
+  <p>{{ messages.deferred }}</p>
+} @placeholder {
+  <p>Placeholder</p>
+}

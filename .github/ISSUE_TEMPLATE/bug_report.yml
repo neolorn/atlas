@@ -1,0 +1,80 @@
+# A defect report.
+#
+# Every field here is either something only the reporter knows or something a maintainer would
+# otherwise have to ask for first. Atlas behaves differently across Angular majors, Node lines and
+# locales, so a report that names none of them costs a round trip before anyone can try to see it.
+name: Bug report
+description: Something Atlas does that it should not, or does not do that it should.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A security vulnerability does not go here. See `SECURITY.md` for how to report one privately.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you saw, including the exact message or rendered output if there was one.
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-you-expected
+    attributes:
+      label: What you expected instead
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: How to reproduce it
+      description: >-
+        The smallest case that shows it: a repository, or the catalog, configuration and component
+        involved. A defect that cannot be reproduced cannot be fixed.
+    validations:
+      required: true
+
+  - type: input
+    id: atlas-version
+    attributes:
+      label: Atlas version
+      description: The version of `@neolorn/atlas` and `@neolorn/atlas-toolkit`, which share one number.
+      placeholder: 1.0.0-alpha.3
+    validations:
+      required: true
+
+  - type: input
+    id: angular-version
+    attributes:
+      label: Angular version
+      placeholder: 22.1.3
+    validations:
+      required: true
+
+  - type: input
+    id: node-version
+    attributes:
+      label: Node version
+      description: The output of `node --version`.
+      placeholder: v24.18.0
+    validations:
+      required: true
+
+  - type: input
+    id: diagnostic-code
+    attributes:
+      label: Diagnostic code
+      description: The code Atlas reported, if it reported one. Every code is listed on the diagnostics page.
+      placeholder: ATL1310
+    validations:
+      required: false
+
+  - type: textarea
+    id: anything-else
+    attributes:
+      label: Anything else
+      description: Locales involved, whether it happens under server rendering, what you tried.
+    validations:
+      required: false
