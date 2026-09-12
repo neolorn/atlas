@@ -11,6 +11,8 @@ import { availableParallelism } from 'node:os';
 import { basename, dirname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { attemptLedgerPath, workingRoot } from './working-state.mjs';
+
 /**
  * The gate, as a dependency graph rather than a list.
  *
@@ -409,16 +411,15 @@ const workspaceRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const tracerPath = resolve(workspaceRoot, 'tools/trace-artefacts.cjs')
   .split(sep)
   .join('/');
-const runDirectory = resolve(workspaceRoot, 'tmp/verify-run');
+const runDirectory = resolve(workingRoot, 'verify-run');
 // Logs, traces and the summary stay in the repository the engineer is sitting in, not in the
 // worktrees, because the worktrees are removed at the end of the run and the evidence is the part
 // worth keeping.
-const treesRoot = resolve(workspaceRoot, 'tmp/verify-trees');
+const treesRoot = resolve(workingRoot, 'verify-trees');
 const serial = process.argv.includes('--serial');
 const planOnly = process.argv.includes('--plan');
 const resuming = process.argv.includes('--resume');
 const keepTrees = process.argv.includes('--keep-trees');
-const ledgerPath = resolve(workspaceRoot, 'tmp/verify-ledger.jsonl');
 
 const git = (...args) =>
   execFileSync('git', args, { cwd: workspaceRoot, maxBuffer: 1 << 28 })
@@ -1118,7 +1119,7 @@ if (originalFailures.length === 0) originalFailures = failures;
 // Every attempt is an occurrence. A resume that passes does not erase the failure it resumed from,
 // and a recurring failure is only measurable if each of its occurrences was written down.
 appendFileSync(
-  ledgerPath,
+  attemptLedgerPath,
   `${JSON.stringify({
     at: new Date().toISOString(),
     mode: resuming ? 'resume' : serial ? 'serial' : 'graph',

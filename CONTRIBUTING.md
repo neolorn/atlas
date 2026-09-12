@@ -77,7 +77,7 @@ pnpm run refresh:consumer
 pnpm run refresh:consumer-locks
 ```
 
-`clean` deletes `dist/` and `tmp/`. Run it when a build output from an earlier state of the tree is being read by something that should be reading a fresh one, or to discard the work trees and consumer installs the verification suite leaves behind. `pnpm run clean dist` removes the build output alone.
+`clean` deletes `dist/` and empties `tmp/`. Run it when a build output from an earlier state of the tree is being read by something that should be reading a fresh one, or to discard the work trees and consumer installs the verification suite leaves behind. The suite's attempt ledger stays, because nothing can rebuild it. `pnpm run clean dist` removes the build output alone.
 
 `refresh:consumer` hands the consumer fixtures the packages that are in `dist/` right now. A fixture takes Atlas as a `file:` dependency, which pnpm copies into its store, so a fixture that is already installed goes on running the build it was installed with until this runs.
 
