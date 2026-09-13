@@ -9,6 +9,36 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The 0.x line is the alpha
 stage, then the betas, then the release candidates that carry the changes breaking an earlier call.
 
+## [1.1.0] - 2026-09-13
+
+A renderer can state the status of its own response. This closes the gap 1.0.1 recorded: serving
+maintenance, or reporting a render that failed, is an application's answer about its own condition,
+and it was unreachable through `createLocaleRequestHandler`, because every rendered response took
+the status Atlas resolved for the address. Nothing that worked before behaves differently.
+
+### Added
+
+- `declareOperationalFailure` in `@neolorn/atlas/http`, with `DeclaredOperationalFailure` and
+  `LocalizedRenderResult`. A renderer may now return a `Response` as it always could, or a
+  declaration wrapping one. The wrapper is what makes the status a statement, so an accidental 500
+  and a deliberate 503 are never the same signal, and a renderer written against 1.0 is unaffected.
+
+  A declared status travels at an address Atlas serves. At an address Atlas answered from its own
+  status table, a 404 or a 410, that classification stands and the declaration is reported once in
+  development, naming the address and both statuses. An application declaring maintenance does not
+  know which addresses Atlas refused, so the rule that leaves those alone is the one it can write
+  against.
+
+  A response carrying a declaration is classified private and not stored whatever the address is
+  normally classified as, so a shared cache does not hold a maintenance page under the page's own
+  key and go on serving it after the deployment recovers.
+
+### Changed
+
+- `specs/07-routing-rendering-and-seo.spec.md` section 5 states the declaration's shape, which side
+  wins where the two disagree, the report a release owes a developer when a declaration did not
+  travel, and the cache classification a carried declaration takes.
+
 ## [1.0.1] - 2026-09-13
 
 Two fixes to the request handler in `@neolorn/atlas/http`, both found from a consumer's side, and
