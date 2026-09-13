@@ -1,6 +1,6 @@
 {
   "name": "@neolorn/atlas-toolkit",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Compiler and developer tooling for Atlas localization projects.",
   "homepage": "https://github.com/neolorn/atlas/tree/main/packages/toolkit#readme",
   "keywords": [

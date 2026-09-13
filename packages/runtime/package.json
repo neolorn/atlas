@@ -1,6 +1,6 @@
 {
   "name": "@neolorn/atlas",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Localization runtime for Angular applications.",
   "homepage": "https://github.com/neolorn/atlas/tree/main/packages/runtime#readme",
   "keywords": [

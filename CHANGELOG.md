@@ -9,6 +9,40 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The 0.x line is the alpha
 stage, then the betas, then the release candidates that carry the changes breaking an earlier call.
 
+## [1.0.1] - 2026-09-13
+
+Two fixes to the request handler in `@neolorn/atlas/http`, both found from a consumer's side, and
+the specification correction that goes with them. Nothing is added and nothing is removed; a
+deployment that serves requests through `createLocaleRequestHandler` should take this release.
+
+### Fixed
+
+- A structurally unsafe request target reaches the classifier as it arrived. `toWebRequest` built a
+  Fetch `Request`, and constructing one parses its URL, which resolves dot segments and rewrites a
+  backslash. `/en/%2e%2e/%2e%2e/etc/passwd` therefore reached the handler as `/etc/passwd`: the
+  address the traversal was aiming at, repaired, with nothing left to refuse. The 400 that section
+  5 of the routing specification requires was unreachable for any deployment using the adapter, and
+  `/en/./about` was served as a page. The target is now carried from the adapter to the classifier
+  as it arrived, and is classified before dispatch, so an unsafe address under a locale-neutral
+  root is refused rather than handed to whatever serves files.
+
+- A malformed target no longer reaches a renderer. The handler asked the application to render
+  every outcome that was not a redirect, and a refused target is not a redirect, so an application
+  was asked to draw a page for an address Atlas had already refused, with a resolution carrying a
+  diagnostic rather than a route. The status was correct either way; what was wrong is that the
+  renderer ran at all. `RenderableResolution` no longer includes the malformed outcome, which is
+  what the entry point's documentation already said.
+
+### Changed
+
+- `specs/07-routing-rendering-and-seo.spec.md` sections 4 and 5. Section 4 states that where an
+  Atlas release is itself the request boundary the rejection is the release's own, and that a
+  parsed URL is not the target that arrived. Section 5 states that a refused target never reaches
+  the renderer, and resolves a contradiction it carried: the fixed status table governs routing
+  outcomes, while an operational failure is the consumer application's own and the status that
+  reports one is the consumer application's to declare. No release supplies a way to declare one
+  yet, which is now recorded as the gap it is rather than left implied.
+
 ## [1.0.0] - 2026-09-12
 
 The first public release. `@neolorn/atlas` and `@neolorn/atlas-toolkit` are published to npm under
