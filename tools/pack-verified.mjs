@@ -43,11 +43,23 @@ const source = resolve(workspaceRoot, packageDirectory);
 // the same version that nothing looked at.
 //
 // One directory per package, because packing the second must not delete the first's verified
-// archive: both are published together.
+// archive: both are published together. One directory per version inside it, for the same reason a
+// step further out. An archive is reproducible only while the tree still holds the version it was
+// built from, so a pack that clears everything beside it destroys the only copy of an archive that
+// may not have been published yet. That is not theoretical either: packing 1.1.0 removed 1.0.1's
+// archives while 1.0.1 was still tagged and unpublished.
 const verifiedRoot = resolve(workspaceRoot, 'release');
+const { version } = JSON.parse(
+  await readFile(join(source, 'package.json'), 'utf8'),
+);
+assert.ok(
+  typeof version === 'string' && version.length > 0,
+  `${packageDirectory} states no version, so its archive has no directory to go in.`,
+);
 const outputRoot = resolve(
   verifiedRoot,
   packageDirectory.split(/[\\/]/).filter(Boolean).at(-1),
+  version,
 );
 
 // This path is removed and recreated below, and it is computed from an argument. An earlier

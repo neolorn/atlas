@@ -30,7 +30,7 @@ The commands below are written for version `0.0.0`, which this project cannot pr
    pnpm run verify
    ```
 
-   The suite must pass in full. As part of the run, `verify:tarballs` packs both packages and verifies the archive contents against the build; the verified archives are written to `release/runtime/` and `release/toolkit/`.
+   The suite must pass in full. As part of the run, `verify:tarballs` packs both packages and verifies the archive contents against the build; the verified archives are written to `release/runtime/0.0.0/` and `release/toolkit/0.0.0/`, one directory per version so that a later release does not remove an archive this one has not published yet.
 
 5. **Push the commit and the tag**, then read the tag back from the remote rather than trusting the push output:
 
@@ -44,8 +44,8 @@ The commands below are written for version `0.0.0`, which this project cannot pr
 6. **Publish the verified archives.** Publish the archives the suite produced rather than repacking:
 
    ```sh
-   npm publish release/runtime/neolorn-atlas-0.0.0.tgz
-   npm publish release/toolkit/neolorn-atlas-toolkit-0.0.0.tgz
+   npm publish release/runtime/0.0.0/neolorn-atlas-0.0.0.tgz
+   npm publish release/toolkit/0.0.0/neolorn-atlas-toolkit-0.0.0.tgz
    ```
 
    For a prerelease, add `--tag next`. The registry is set by `publishConfig` in each manifest. Publish both packages in the same session.

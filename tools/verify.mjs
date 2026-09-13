@@ -1230,6 +1230,12 @@ const red =
  *
  * Keyed by the artefact the graph already names, so the stage that writes it and the tree it wrote
  * it in are derived here rather than restated.
+ *
+ * Copied over what is already here rather than replacing it. A tree holds one version, so a run
+ * that emptied this directory first would take every earlier version's archives with it, and an
+ * archive for a version the tree has moved past cannot be built again from here. `verify:tarballs`
+ * files each one under its own version, so what this overwrites is the version just built and
+ * nothing else.
  */
 const KEPT_FROM_A_GREEN_RUN = new Map([['release:packages', 'release']]);
 
@@ -1251,13 +1257,7 @@ if (!red) {
       );
     }
     const kept = resolve(workspaceRoot, directory);
-    rmSync(kept, {
-      recursive: true,
-      force: true,
-      maxRetries: 10,
-      retryDelay: 300,
-    });
-    cpSync(from, kept, { recursive: true });
+    cpSync(from, kept, { recursive: true, force: true });
     process.stdout.write(`=== ${directory} kept from ${producer.id}\n`);
   }
 }
