@@ -184,3 +184,67 @@ describe('the handler behind a Node listener', () => {
     expect(sink.body()).toContain('lang="ar-EG"');
   });
 });
+
+/**
+ * `specs/07-routing-rendering-and-seo.spec.md` section 4: an Atlas release MUST NOT repair a
+ * structurally unsafe target, and section 5 answers one with 400 before presentation routing.
+ *
+ * The adapter builds a Fetch `Request`, and a URL resolves dot segments and rewrites a backslash as
+ * it is constructed, so `/en-us/%2e%2e/%2e%2e/etc/passwd` arrives at a handler written against one
+ * as `/etc/passwd`: the address the traversal was aiming at, repaired, with nothing left to
+ * classify. What the classifier is given has to be what arrived.
+ */
+describe('a structurally unsafe target read through the Node adapter', () => {
+  const targets = [
+    '/en-us/%2e%2e/%2e%2e/etc/passwd',
+    '/en-us/../../etc/passwd',
+    '/en-us/./second',
+    '/en-us/back\\slash',
+  ];
+
+  it('answers 400 and asks no renderer', async () => {
+    const seen: { target: string; status: number; renders: number }[] = [];
+
+    for (const target of targets) {
+      let renders = 0;
+      const handler = createLocaleRequestHandler({
+        policy: POLICY,
+        projection: PROJECTION,
+        cache: { successMaxAge: 600, permanentRedirectMaxAge: 86_400 },
+        cookie: { name: 'atlas-locale' },
+        render: () => {
+          renders += 1;
+          return new Response('<!doctype html>');
+        },
+      });
+
+      const response = await handler(
+        toWebRequest(incoming(target), 'http://atlas.example'),
+      );
+      seen.push({ target, status: response.status, renders });
+    }
+
+    expect(seen).toStrictEqual(
+      targets.map((target) => ({ target, status: 400, renders: 0 })),
+    );
+  });
+
+  it('does not reflect the address the traversal was aiming at', async () => {
+    const handler = createLocaleRequestHandler({
+      policy: POLICY,
+      projection: PROJECTION,
+      cache: { successMaxAge: 600, permanentRedirectMaxAge: 86_400 },
+      cookie: { name: 'atlas-locale' },
+    });
+
+    const response = await handler(
+      toWebRequest(
+        incoming('/en-us/%2e%2e/%2e%2e/etc/passwd'),
+        'http://atlas.example',
+      ),
+    );
+
+    expect(response.headers.get('location')).toBeNull();
+    expect(await response.text()).toBe('');
+  });
+});

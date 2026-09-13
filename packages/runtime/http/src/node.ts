@@ -1,4 +1,5 @@
 import type { LocaleRequestHandler } from './handler';
+import { rememberRawTarget } from './raw-target';
 
 /**
  * The Node adapter, and the only file here that knows Node exists.
@@ -50,6 +51,10 @@ export interface NodeResponseLike {
  * Takes the message and the origin the request arrived on. The origin is required rather than
  * derived from the `Host` header, because that header is client-controlled and the resulting
  * address decides what Atlas treats as same-origin.
+ *
+ * The target is recorded as it arrived. Building the request resolves dot segments and rewrites a
+ * backslash, so a structurally unsafe target would otherwise reach the handler as the address it
+ * was aiming at, repaired, and be rendered rather than refused.
  */
 export function toWebRequest(
   message: NodeRequestLike,
@@ -62,7 +67,10 @@ export function toWebRequest(
     else for (const entry of value) headers.append(name, entry);
   }
   const method = message.method ?? 'GET';
-  return new Request(new URL(message.url ?? '/', origin), { method, headers });
+  const target = message.url ?? '/';
+  const request = new Request(new URL(target, origin), { method, headers });
+  rememberRawTarget(request, target);
+  return request;
 }
 
 /**

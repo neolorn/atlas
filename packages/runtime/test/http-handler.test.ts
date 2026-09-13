@@ -314,3 +314,63 @@ describe('the fact the handler derives and the descriptor is told', () => {
     expect(response.headers.get('set-cookie')).toBeNull();
   });
 });
+
+/**
+ * The outcome that has a status and no body.
+ *
+ * `hasBody` reads "not a redirect", and a malformed target is not a redirect, so the one outcome
+ * the entry point documents as never reaching a renderer was the one reaching it. The status was
+ * right either way, because it comes from the descriptor; what was wrong is that an application was
+ * asked to render a page for an address Atlas had already refused, with a resolution carrying no
+ * presentation of its own.
+ *
+ * These are the unsafe shapes a URL keeps. The ones it rewrites are checked through the adapter in
+ * `http-node-adapter.test.ts`, because that is where they are lost.
+ */
+describe('a malformed target', () => {
+  const targets = ['/en-us/%zz', '/en-us//double', '/en-us/a%2Fb'];
+
+  it('is answered without a renderer being asked', async () => {
+    const seen: { target: string; status: number; renders: number }[] = [];
+
+    for (const target of targets) {
+      let renders = 0;
+      const handler = createLocaleRequestHandler({
+        policy: POLICY,
+        projection: PROJECTION,
+        cache: CACHE,
+        cookie: { name: 'atlas-locale' },
+        render: () => {
+          renders += 1;
+          return new Response('<!doctype html>');
+        },
+      });
+
+      const response = await handler(
+        new Request(`https://atlas.example${target}`),
+      );
+      seen.push({ target, status: response.status, renders });
+    }
+
+    expect(seen).toStrictEqual(
+      targets.map((target) => ({ target, status: 400, renders: 0 })),
+    );
+  });
+
+  it('carries no body and no cookie', async () => {
+    const handler = createLocaleRequestHandler({
+      policy: POLICY,
+      projection: PROJECTION,
+      cache: CACHE,
+      cookie: { name: 'atlas-locale' },
+      render: () => new Response('<!doctype html>'),
+    });
+
+    const response = await handler(
+      new Request('https://atlas.example/en-us/%zz'),
+    );
+
+    expect(await response.text()).toBe('');
+    expect(response.headers.getSetCookie()).toStrictEqual([]);
+  });
+});

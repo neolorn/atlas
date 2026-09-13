@@ -140,6 +140,14 @@ another ambiguous form, at its earliest boundary, before Angular routing, server
 resolution, catalog loading, or a domain lookup. An Atlas release MUST NOT repair or reflect one. An Atlas
 release supplies validators for safely parsed values; raw request-target rejection stays the host's.
 
+Where an Atlas release is itself that boundary, in its own request handler and the adapter that
+feeds it, the rejection is the release's own and it MUST classify the target as it arrived. A
+parsed URL is not that target. Parsing resolves dot segments and rewrites a backslash, so a release
+that carries only a parsed URL from the boundary to the classifier has repaired the target before
+anything classified it, and what it then refuses or serves is the address the unsafe one was aiming
+at rather than the one that arrived. The classification runs before dispatch, so an address a
+locale-neutral root would have claimed is validated rather than handed to its owner unread.
+
 Presentation routing has two entrances and an Atlas release MUST delocalize at both, through one
 function: the localized location strategy for an address the browser supplies, and the localized
 URL handling strategy for an address the application hands the router. Every address the route
@@ -155,11 +163,14 @@ reinterpreting it, and MUST NOT turn a missing translation into a missing entity
 
 An Atlas release builds the response and a consumer application supplies the body. The request
 handler answers every outcome without a body of its own, and for an outcome with a body it calls
-the application's renderer and composes the two: the status is the one Atlas resolved, a header
-Atlas derived replaces a header of the same name the renderer set, and a set-cookie header is
-appended rather than replaced, because both sides may have a reason to write one. A renderer is
-optional. An Atlas release MUST NOT let an address the locale policy declines reach that
-composition, because it is not an outcome; it goes to the deployment's own handling.
+the application's renderer and composes the two: the status is the one Atlas resolved for the
+address, a header Atlas derived replaces a header of the same name the renderer set, and a
+set-cookie header is appended rather than replaced, because both sides may have a reason to write
+one. A renderer is optional. An Atlas release MUST NOT let an address the locale policy declines
+reach that composition, because it is not an outcome; it goes to the deployment's own handling. A
+refused target MUST NOT reach it either: a structurally unsafe target has no presentation, it
+carries a diagnostic rather than a route, and asking an application to draw a page for one asks it
+to draw an address the release has just refused.
 
 The status table is fixed. An Atlas release MUST answer preference-dependent locale entry with 307
 for safe methods, deterministic canonical correction or declared replacement with 308, unsupported
@@ -167,6 +178,17 @@ explicit locale intent with 404 at the requested URL, a missing route or an abse
 localized 404 at the requested URL, a declared permanent removal with no replacement with 410, and
 a structurally unsafe target with 400 before presentation routing. An Atlas release MUST NOT render
 another language as the locale that was asked for.
+
+That table governs routing outcomes and nothing else. An operational failure is not one: it is the
+consumer application's own, as section 8 of `06-runtime-and-angular.spec.md` classes it, and
+serving maintenance or reporting a render that failed is ordinary rather than exceptional. The
+status that reports one is therefore the consumer application's to declare, and an Atlas release
+MUST carry a declared operational failure rather than substitute the status of the address it
+arrived at. An Atlas release MUST NOT read a status a renderer did not declare as a declaration,
+because an accidental failure and a deliberate one arriving as the same value cannot be told apart.
+The means of declaring one is a surface an Atlas release supplies, and a release that supplies none
+leaves a consumer application with no way to state an operational failure at an address that
+resolved.
 
 An Atlas release MUST build a locale-entry redirect's destination in the locale it resolved to, so
 the redirect lands on a canonical URL in one hop. An address that already states its locale is authoritative,

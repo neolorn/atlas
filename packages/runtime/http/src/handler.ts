@@ -25,6 +25,8 @@ import {
   type RouteRuntimeProjection,
 } from '@neolorn/atlas/core';
 
+import { rawTargetOf } from './raw-target';
+
 /**
  * How this deployment remembers a visitor's choice, or that it does not.
  *
@@ -51,7 +53,12 @@ export type LocaleCookiePolicy =
  * the handler has already decided, and the check it writes is the one that goes stale: a redirect
  * has no `presentationLocale`, and nothing but the type stops a consumer reaching for it.
  *
- * *Stated as an exclusion, not as a list of the three statuses that have bodies.* The obvious
+ * A redirect and a malformed target are both excluded, and from the renderer's side for the same
+ * reason: neither is an outcome with a presentation. A redirect's answer is its location, and a
+ * malformed target has been refused, so asking an application to draw a page for either is asking
+ * it to draw something that does not exist.
+ *
+ * *Stated as an exclusion, not as a list of the statuses that have bodies.* The obvious
  * spelling (`Extract<RouteResolution, { status: 'success' | 'not-found' | 'gone' }>`) silently
  * drops `not-found`, because one member of the union carries
  * `status: 'unsupported-locale' | 'not-found'` and a member whose discriminant is itself a union is
@@ -61,7 +68,7 @@ export type LocaleCookiePolicy =
  */
 export type RenderableResolution = Exclude<
   RouteResolution,
-  { readonly status: 'redirect' }
+  { readonly status: 'redirect' | 'malformed' }
 >;
 
 /** What the handler resolved, handed to the renderer when there is something to render. */
@@ -181,7 +188,30 @@ export function createLocaleRequestHandler(
 
   return async (request: Request): Promise<Response> => {
     const url = new URL(request.url);
-    if (bypasses(url, policy)) {
+    const carried =
+      cookieName === undefined
+        ? undefined
+        : readCookie(request.headers.get('cookie'), cookieName);
+    const preferred =
+      carried ??
+      preferredFromAcceptLanguage(request.headers.get('accept-language'));
+
+    // The target as it arrived, when this entry point's own adapter built the request. A `Request`
+    // carries a parsed URL, and parsing one resolves dot segments and rewrites a backslash, so the
+    // path on it is not always what was asked for.
+    const resolution = resolveLocalizedRoute(
+      rawTargetOf(request) ?? `${url.pathname}${url.search}`,
+      policy,
+      options.projection,
+      preferred === undefined ? undefined : { locale: preferred },
+    );
+
+    // Classified before anything dispatches on it, which is the order
+    // `specs/07-routing-rendering-and-seo.spec.md` section 4 states: the target is validated, then
+    // a locale-neutral root reaches its owner, then presentation routing. A bypassed address is
+    // not exempt from the first step, because `/assets/%2e%2e/%2e%2e/etc/passwd` is not an asset
+    // request, and handing it to whatever serves files is the one thing that must not happen.
+    if (resolution.status !== 'malformed' && bypasses(url, policy)) {
       // Declined, not rendered. A bypassed address is one Atlas has decided is not about locale
       // (a static asset, a health check, an upload root) and rendering the application's page for
       // `/main-A1B2C3.js` would be worse than answering nothing. The consumer's own handling is
@@ -191,21 +221,6 @@ export function createLocaleRequestHandler(
         options.passthrough?.(request) ?? new Response(null, { status: 404 })
       );
     }
-
-    const carried =
-      cookieName === undefined
-        ? undefined
-        : readCookie(request.headers.get('cookie'), cookieName);
-    const preferred =
-      carried ??
-      preferredFromAcceptLanguage(request.headers.get('accept-language'));
-
-    const resolution = resolveLocalizedRoute(
-      `${url.pathname}${url.search}`,
-      policy,
-      options.projection,
-      preferred === undefined ? undefined : { locale: preferred },
-    );
     const descriptor = routeHttpDescriptor(resolution);
 
     const headers = new Headers();
@@ -302,10 +317,19 @@ function settledLocale(resolution: RouteResolution): string | undefined {
   return undefined;
 }
 
+/**
+ * Whether this outcome has a presentation for an application to produce.
+ *
+ * Two outcomes do not, and reading this as "not a redirect" let one of them through. A redirect
+ * answers with its location. A malformed target has been refused before presentation routing, by
+ * `specs/07-routing-rendering-and-seo.spec.md` section 5, and a refusal is not a page: the
+ * resolution carries a diagnostic rather than a route, and an application asked to render one has
+ * nothing to draw and an address it must not reflect.
+ */
 function hasBody(
   resolution: RouteResolution,
 ): resolution is RenderableResolution {
-  return resolution.status !== 'redirect';
+  return resolution.status !== 'redirect' && resolution.status !== 'malformed';
 }
 
 function readCookie(header: string | null, name: string): string | undefined {
