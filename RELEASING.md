@@ -14,11 +14,12 @@ Prereleases use the form `1.1.0-rc.1` and are published under the `next` dist-ta
 
 2. **Set the version.** Update `version` in `package.json`, `packages/runtime/package.json`, and `packages/toolkit/package.json`. The three must match; the verification suite fails otherwise.
 
-3. **Commit and tag.**
+3. **Commit and tag.** The tag is annotated, because step 5 pushes with `--follow-tags`, which
+   carries annotated tags and silently leaves a lightweight one behind.
 
    ```sh
    git commit -am "chore(release): 1.1.0"
-   git tag v1.1.0
+   git tag -a v1.1.0 -m "1.1.0"
    ```
 
 4. **Run the verification suite** on the tagged commit:
