@@ -90,6 +90,78 @@ It also writes what a shared cache may do with each answer, from the same classi
 `toNodeListener`, `toWebRequest` and `writeNodeResponse` adapt between Node's request and response
 objects and the web ones, for a server that speaks the former.
 
+## Declare a status of your own
+
+A rendered response carries the status Atlas resolved for its address. Serving maintenance, or
+reporting a render that failed, is your application's answer about its own condition rather than
+something about the address, so you state it. `declareOperationalFailure` wraps the response you
+were going to return, and the wrapper is what makes the status a statement: a 500 nobody meant and
+a 503 somebody chose arrive as the same number otherwise.
+
+```ts src/app/maintenance.spec.ts
+import { describe, expect, it } from 'vitest';
+
+import {
+  createLocaleRequestHandler,
+  declareOperationalFailure,
+} from '@neolorn/atlas/http';
+import { localizationSetup } from '#i18n';
+
+import { appRouteProjection, routePolicy } from './localization.routes';
+
+const handler = createLocaleRequestHandler({
+  policy: routePolicy,
+  projection: appRouteProjection,
+  configuration: localizationSetup.configuration,
+  cache: { successMaxAge: 300, permanentRedirectMaxAge: 86_400 },
+  cookie: false,
+  render: () =>
+    declareOperationalFailure(
+      new Response('<!doctype html><html lang="en-US">Back shortly</html>', {
+        status: 503,
+        headers: { 'content-type': 'text/html', 'retry-after': '600' },
+      }),
+    ),
+});
+
+describe('a deployment serving maintenance', () => {
+  it('answers 503 at an address it serves', async () => {
+    const response = await handler(
+      new Request('https://example.com/en-us/second'),
+    );
+
+    expect(response.status).toBe(503);
+    expect(response.headers.get('retry-after')).toBe('600');
+  });
+
+  it('does not turn an address that does not exist into one', async () => {
+    const response = await handler(
+      new Request('https://example.com/en-us/no-such-page'),
+    );
+
+    expect(response.status).toBe(404);
+  });
+
+  it('is not left in a shared cache to outlive the outage', async () => {
+    const response = await handler(
+      new Request('https://example.com/en-us/second'),
+    );
+
+    expect(response.headers.get('cache-control')).toBe('private, no-store');
+  });
+});
+```
+
+The declaration travels at an address the handler serves. At one it answered from its own status
+table, a 404 or a 410, that status stands and the declaration is reported once in development
+naming both. You are declaring something about your application, and your application has no way to
+know which addresses the handler refused; the rule that leaves those alone is the one you can write
+against.
+
+A response carrying a declaration is private and not stored, whatever the address is normally
+classified as, so a content network does not hold your maintenance page under the page's own key
+and keep serving it after you recover.
+
 ## Where it is used
 
 A redirect at the edge, sending a visitor who asked for `/` to the address for the language they

@@ -20,10 +20,13 @@
 
 export {
   createLocaleRequestHandler,
+  declareOperationalFailure,
+  type DeclaredOperationalFailure,
   type LocaleCookiePolicy,
   type LocaleRequestHandler,
   type LocaleRequestHandlerOptions,
   type LocaleRequestOutcome,
+  type LocalizedRenderResult,
   type RenderableResolution,
   type LocaleRenderer,
 } from './handler';

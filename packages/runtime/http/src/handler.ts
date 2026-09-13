@@ -21,6 +21,7 @@ import {
   type LocalePreferenceSource,
   type LocaleUrlPolicy,
   type RouteCacheDurations,
+  type RouteHttpDescriptor,
   type RouteResolution,
   type RouteRuntimeProjection,
 } from '@neolorn/atlas/core';
@@ -90,10 +91,60 @@ export interface LocaleRequestOutcome {
   readonly locale: string;
 }
 
+/**
+ * A response whose status the application is stating for itself.
+ *
+ * Section 5 of `specs/07-routing-rendering-and-seo.spec.md` keeps three outcome classes apart, and
+ * an operational failure is not a routing outcome: serving maintenance, or reporting a render that
+ * failed, is the application's own answer about its own condition at an address that resolved
+ * perfectly well. Atlas has nothing to say about it and no way to detect it, so it is declared.
+ *
+ * *The wrapper is the declaration.* A renderer's plain `Response` also carries a status, and
+ * reading that as a statement would make an accidental 500 and a deliberate one the same signal,
+ * which section 5 forbids for exactly that reason. Wrapping is the act that separates them.
+ */
+export interface DeclaredOperationalFailure {
+  /** The response to send, whose own status is the one being declared. */
+  readonly operationalFailure: Response;
+}
+
+/**
+ * Declares the response's own status rather than letting the address's status stand.
+ *
+ * ```ts
+ * render: () =>
+ *   declareOperationalFailure(
+ *     new Response(maintenanceDocument, {
+ *       status: 503,
+ *       headers: { 'retry-after': '600', 'content-type': 'text/html' },
+ *     }),
+ *   );
+ * ```
+ *
+ * The declaration is honoured at an address Atlas serves. At one it refuses, the refusal stands
+ * and the declaration is reported where a developer will see it, because an application declaring
+ * maintenance does not know which addresses Atlas refused and cannot be asked to.
+ */
+export function declareOperationalFailure(
+  response: Response,
+): DeclaredOperationalFailure {
+  return Object.freeze({ operationalFailure: response });
+}
+
+/**
+ * What a renderer may return: the document, or the document with a status declared for it.
+ *
+ * A union rather than a replacement for `Response`. A renderer that returns one keeps working
+ * exactly as it did, which is what allows the second arm to arrive in a minor release, and it is
+ * also the honest shape: declaring an operational failure is the uncommon case and it should look
+ * like one at the call site.
+ */
+export type LocalizedRenderResult = Response | DeclaredOperationalFailure;
+
 /** Produces the document. Called only for outcomes that have a body. */
 export type LocaleRenderer = (
   outcome: LocaleRequestOutcome,
-) => Response | Promise<Response>;
+) => LocalizedRenderResult | Promise<LocalizedRenderResult>;
 
 /**
  * What a locale request handler needs to answer a request.
@@ -186,6 +237,11 @@ export function createLocaleRequestHandler(
   const localePreference: LocalePreferenceSource =
     cookie === false ? 'accept-language' : 'cookie';
 
+  // Per handler rather than per module, so one deployment's warnings cannot silence another's,
+  // and per process rather than per request, because a declaration at a refused address is a
+  // defect in how the renderer was written and repeating it once a request reports nothing new.
+  const reported = new Set<string>();
+
   return async (request: Request): Promise<Response> => {
     const url = new URL(request.url);
     const carried =
@@ -222,55 +278,144 @@ export function createLocaleRequestHandler(
       );
     }
     const descriptor = routeHttpDescriptor(resolution);
-
-    const headers = new Headers();
-    for (const [name, value] of Object.entries(
-      routeCacheHeaders(descriptor, { ...options.cache, localePreference }),
-    )) {
-      headers.set(name, value);
-    }
-    if (descriptor.contentLanguage !== undefined) {
-      headers.set('content-language', descriptor.contentLanguage);
-    }
-    if (descriptor.robots !== undefined) {
-      headers.set('x-robots-tag', descriptor.robots);
-    }
-    if (descriptor.location !== undefined) {
-      headers.set('location', descriptor.location);
-    }
-
     const settled = settledLocale(resolution);
-    // Only when there is something new to remember, and only when a person asked for it.
-    if (
-      cookieName !== undefined &&
-      settled !== undefined &&
-      settled !== carried &&
-      !isBackgroundRequest(request)
-    ) {
-      headers.append(
-        'set-cookie',
-        serializeCookie(cookieName, settled, cookie === false ? {} : cookie),
-      );
-    }
+
+    // Taken as an argument rather than read from the descriptor, because a declared operational
+    // failure changes what a cache may do with the response and changes nothing else about it,
+    // and that is known only after the renderer has answered.
+    const atlasHeaders = (cache: RouteHttpDescriptor['cache']): Headers => {
+      const headers = new Headers();
+      for (const [name, value] of Object.entries(
+        routeCacheHeaders(
+          { ...descriptor, cache },
+          { ...options.cache, localePreference },
+        ),
+      )) {
+        headers.set(name, value);
+      }
+      if (descriptor.contentLanguage !== undefined) {
+        headers.set('content-language', descriptor.contentLanguage);
+      }
+      if (descriptor.robots !== undefined) {
+        headers.set('x-robots-tag', descriptor.robots);
+      }
+      if (descriptor.location !== undefined) {
+        headers.set('location', descriptor.location);
+      }
+      // Only when there is something new to remember, and only when a person asked for it.
+      if (
+        cookieName !== undefined &&
+        settled !== undefined &&
+        settled !== carried &&
+        !isBackgroundRequest(request)
+      ) {
+        headers.append(
+          'set-cookie',
+          serializeCookie(cookieName, settled, cookie === false ? {} : cookie),
+        );
+      }
+      return headers;
+    };
 
     if (!hasBody(resolution) || options.render === undefined) {
-      return new Response(null, { status: descriptor.status, headers });
+      return new Response(null, {
+        status: descriptor.status,
+        headers: atlasHeaders(descriptor.cache),
+      });
     }
-    const rendered = await options.render({
+    const result = await options.render({
       request,
       resolution,
       locale: settled ?? policy.defaultLocale,
     });
+
+    let rendered: Response;
+    let declared = false;
+    if (isDeclaration(result)) {
+      rendered = result.operationalFailure;
+      declared = true;
+    } else {
+      rendered = result;
+    }
+
+    // Section 5's narrow rule: Atlas's classification wins for an address it refused, and the
+    // renderer's declared status wins for one it serves. An application declaring maintenance
+    // does not know which addresses Atlas refused, so a rule written the other way round would be
+    // one the application could not reason about.
+    const carriesDeclaration = declared && resolution.status === 'success';
+    if (declared && !carriesDeclaration) {
+      reportOverriddenDeclaration(
+        reported,
+        url.pathname,
+        resolution.status,
+        rendered.status,
+        descriptor.status,
+      );
+    }
+
     const merged = new Headers(rendered.headers);
-    for (const [name, value] of headers) {
+    for (const [name, value] of atlasHeaders(
+      // A failure is not this address's representation, so it is not an answer a shared cache may
+      // hand to the next visitor who asks for the address.
+      carriesDeclaration ? 'private-no-store' : descriptor.cache,
+    )) {
       if (name === 'set-cookie') merged.append(name, value);
       else merged.set(name, value);
     }
     return new Response(rendered.body, {
-      status: descriptor.status,
+      status: carriesDeclaration ? rendered.status : descriptor.status,
       headers: merged,
     });
   };
+}
+
+function isDeclaration(
+  result: LocalizedRenderResult,
+): result is DeclaredOperationalFailure {
+  return 'operationalFailure' in result;
+}
+
+/**
+ * Whether a warning meant for a developer should be written.
+ *
+ * `NODE_ENV` rather than an option on the handler, because an option has to be set and a
+ * deployment that needed this warning is one that did not think to set it. Anything but
+ * `production` counts, which is the convention a Node process without the variable set already
+ * relies on, and it is the safe direction here: this fires only where a declaration has already
+ * failed to travel, so a line in a log nobody expected names a defect rather than noise.
+ *
+ * Read through `globalThis` because this entry point builds without Node's types and runs in
+ * places that have no `process` at all.
+ */
+function inDevelopment(): boolean {
+  const environment = globalThis as unknown as {
+    readonly process?: { readonly env?: Record<string, string | undefined> };
+  };
+  return environment.process?.env?.['NODE_ENV'] !== 'production';
+}
+
+/**
+ * Says once, where a developer will see it, that a declared status did not travel.
+ *
+ * Once per pair of statuses rather than once per address: the addresses are unbounded and
+ * attacker-supplied, so keying the record on one would let a request decide how much this
+ * process remembers. The address is in the text of the first report, where naming it helps,
+ * quoted so that a target carrying control characters cannot forge a line in a log.
+ */
+function reportOverriddenDeclaration(
+  reported: Set<string>,
+  pathname: string,
+  resolved: RenderableResolution['status'],
+  declaredStatus: number,
+  servedStatus: number,
+): void {
+  if (!inDevelopment()) return;
+  const identity = `${resolved}:${declaredStatus}`;
+  if (reported.has(identity)) return;
+  reported.add(identity);
+  console.warn(
+    `[Atlas] The renderer declared status ${declaredStatus} at ${JSON.stringify(pathname)} and the response is ${servedStatus}. Atlas resolved that address as ${JSON.stringify(resolved)}, and a declared operational failure travels only at an address Atlas serves, so the declaration was not applied. Declare one from a renderer called for a resolved address, or answer the refusal that address already carries.`,
+  );
 }
 
 /**

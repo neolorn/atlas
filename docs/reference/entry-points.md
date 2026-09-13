@@ -29,7 +29,7 @@ Publishes 3 name(s). Needs `@angular/forms`, which is an optional peer: install 
 
 The interceptor that carries the committed locale on outgoing requests.
 
-Publishes 12 name(s).
+Publishes 15 name(s).
 
 ## `@neolorn/atlas/router`
 

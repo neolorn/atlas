@@ -190,6 +190,19 @@ The means of declaring one is a surface an Atlas release supplies, and a release
 leaves a consumer application with no way to state an operational failure at an address that
 resolved.
 
+An Atlas release MUST accept that declaration as a result distinct from the response a renderer
+otherwise returns, so a renderer that returns an ordinary response is unaffected and no status
+arrives as a declaration by accident. Where the two can disagree the narrower rule holds: an Atlas
+release MUST carry a declared status where the address resolved to a route it serves, and MUST send
+the status the table above gives wherever the address resolved to anything else, because a consumer
+application declaring maintenance cannot know which addresses the release answered from the table,
+and a rule it cannot reason about is not one it can apply. An Atlas release MUST report a
+declaration it did not carry where a developer will see it during development, naming the address,
+the status declared, and the status sent, and MUST NOT report it more than once for one pair of
+statuses, because the addresses it can arrive at are unbounded and supplied by the request. A
+carried declaration is not the address's representation, so an Atlas release MUST classify the
+response carrying it as private and not stored, whatever the address's own classification is.
+
 An Atlas release MUST build a locale-entry redirect's destination in the locale it resolved to, so
 the redirect lands on a canonical URL in one hop. An address that already states its locale is authoritative,
 and an Atlas release MUST NOT let a resolved preference override it.
