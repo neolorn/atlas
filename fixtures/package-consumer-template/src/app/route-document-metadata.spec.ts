@@ -208,3 +208,47 @@ describe('a route document declared by route id', () => {
     expect(named[0]).not.toContain('names "route:second"');
   });
 });
+
+describe('the Open Graph block and the image that decides it', () => {
+  const openGraph = (): readonly string[] =>
+    [...document.querySelectorAll('meta[property^="og:"]')].map(
+      (node) => node.getAttribute('property') ?? '',
+    );
+
+  it('writes no block for a declaration that carries no image', async () => {
+    // The half a catalog holds. `siteName` and `imageAlt` are sentences and belong in a catalog;
+    // the image URL is the deployment's and arrives through `document`. A route that declares the
+    // first and supplies no second has started nothing, and `DocumentSocialProjection` says the
+    // image is what decides whether there is a block at all.
+    const router = await configure({
+      'route:second': {
+        title: messages.document.second.title,
+        description: messages.document.second.description,
+        siteName: messages.document.title,
+      },
+    });
+    await router.navigateByUrl('/second');
+
+    expect(openGraph()).toEqual([]);
+    expect(document.querySelector('meta[name="twitter:card"]')).toBeNull();
+    // The rest of the head is unaffected: withholding the block is not withholding the page.
+    expect(description()).not.toBeNull();
+  });
+
+  it('writes the block once the deployment supplies one', async () => {
+    const router = await configure(
+      {
+        'route:second': {
+          title: messages.document.second.title,
+          description: messages.document.second.description,
+          siteName: messages.document.title,
+        },
+      },
+      () => ({ social: { image: 'https://atlas.example/social/preview.png' } }),
+    );
+    await router.navigateByUrl('/second');
+
+    expect(openGraph()).toContain('og:image');
+    expect(openGraph()).toContain('og:site_name');
+  });
+});

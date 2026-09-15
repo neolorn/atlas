@@ -871,7 +871,12 @@ export class DocumentLocalization {
         link('alternate', seo.xDefault, 'x-default');
       }
       const social = projection.social;
-      if (social !== undefined) {
+      // The image decides whether there is a block at all, which `DocumentSocialProjection` states
+      // and this is where it holds. A projection reaches here assembled from two halves, a
+      // catalog's alt text and site name and a deployment's image URL, and either half can arrive
+      // alone. Emitting the block for the half without the image writes `og:image` with no value
+      // and tells a crawler the page is annotated for sharing when nothing annotated it.
+      if (social?.image !== undefined) {
         // Order follows ogp.me's own listing of the four required properties, so a reader comparing
         // the emitted head against the specification reads them in the same sequence.
         if (projection.title !== undefined)
