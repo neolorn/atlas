@@ -9,7 +9,7 @@ This page is generated from the packages and is not edited by hand.
 
 Everything an application component and its bootstrap need.
 
-Publishes 211 name(s).
+Publishes 214 name(s).
 
 Composable from here: `provideLocalizationSetup`, `withExtensions`, `withFormattingContext`, `withLocaleAnnouncement`, `withLocaleSources`, `withLocalizationClock`, `withObservability`, `withOverlayLocale`, `withPersistence`, `withRecoveryMessage`, `withRelativeTimePolicy`, `withRouting`, `withoutDocumentLocale`.
 
@@ -17,7 +17,7 @@ Composable from here: `provideLocalizationSetup`, `withExtensions`, `withFormatt
 
 The value builders, the contracts and the address helpers, with no Angular injector involved. This is what a library or a test helper imports.
 
-Publishes 221 name(s).
+Publishes 231 name(s).
 
 ## `@neolorn/atlas/forms`
 
@@ -29,13 +29,13 @@ Publishes 3 name(s). Needs `@angular/forms`, which is an optional peer: install 
 
 The interceptor that carries the committed locale on outgoing requests.
 
-Publishes 15 name(s).
+Publishes 17 name(s).
 
 ## `@neolorn/atlas/router`
 
 Localized routing: the router setup, the link directive, and the address projection behind them.
 
-Publishes 12 name(s). Needs `@angular/router`, which is an optional peer: install it when you import from here.
+Publishes 17 name(s). Needs `@angular/router`, which is an optional peer: install it when you import from here.
 
 Composable from here: `provideLocalizedRouter`.
 
@@ -51,7 +51,7 @@ Composable from here: `provideLocalizedServerRendering`.
 
 The test harness. It replaces the parts of the runtime a test cannot wait for, and nothing else.
 
-Publishes 8 name(s).
+Publishes 17 name(s).
 
 Composable from here: `provideLocalizationTesting`.
 
