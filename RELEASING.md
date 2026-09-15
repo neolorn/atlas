@@ -49,9 +49,17 @@ The commands below are written for version `0.0.0`, which this project cannot pr
 
    For a prerelease, add `--tag next`. The registry is set by `publishConfig` in each manifest. Publish both packages in the same session.
 
-7. **Create the GitHub release** from the tag. The body is that version's change list drafted from its changelog section, one line per change, then the install commands for both packages, then the links a reader follows from the release. It opens with the list and carries no summary sentence above it.
+7. **Move the version on.** Set the three manifests to the next prerelease identifier, so the tree stops claiming a version that has shipped:
 
-8. **Verify the publication.** From a clean directory, install both packages at the new version and confirm they resolve.
+   ```sh
+   git commit -am "chore(version): 0.0.1-rc.1"
+   ```
+
+   Step 4 writes the verified archives under the version in the manifests. A tree left on the version it just published packs every later run into that same directory, so the archive holding what was published is replaced by a build that was not. Moving the version on keeps each build between releases under a version nothing has published, and the next release's step 2 sets the version it actually goes out as.
+
+8. **Create the GitHub release** from the tag. The body is that version's change list drafted from its changelog section, one line per change, then the install commands for both packages, then the links a reader follows from the release. It opens with the list and carries no summary sentence above it.
+
+9. **Verify the publication.** From a clean directory, install both packages at the new version and confirm they resolve.
 
 ## Withdrawing a release
 
