@@ -16,15 +16,13 @@ The commands below are written for version `0.0.0`, which this project cannot pr
 
 2. **Set the version.** Update `version` in `package.json`, `packages/runtime/package.json`, and `packages/toolkit/package.json`. The three must match; the verification suite fails otherwise.
 
-3. **Commit and tag.** The tag is annotated, because step 5 pushes with `--follow-tags`, which
-   carries annotated tags and silently leaves a lightweight one behind.
+3. **Commit the release.**
 
    ```sh
    git commit -am "chore(release): 0.0.0"
-   git tag -a v0.0.0 -m "0.0.0"
    ```
 
-4. **Run the verification suite** on the tagged commit:
+4. **Run the verification suite** on that commit:
 
    ```sh
    pnpm run verify
@@ -32,9 +30,10 @@ The commands below are written for version `0.0.0`, which this project cannot pr
 
    The suite must pass in full. As part of the run, `verify:tarballs` packs both packages and verifies the archive contents against the build; the verified archives are written to `release/runtime/0.0.0/` and `release/toolkit/0.0.0/`, one directory per version so that a later release does not remove an archive this one has not published yet.
 
-5. **Push the commit and the tag**, then read the tag back from the remote rather than trusting the push output:
+5. **Tag the verified commit and push both**, then read the tag back from the remote rather than trusting the push output. The tag is created after the suite has passed, so a tag never names a commit the suite has not verified, and a red run leaves a commit to fix with no tag to delete. It is annotated because the push below carries annotated tags and silently leaves a lightweight one behind.
 
    ```sh
+   git tag -a v0.0.0 -m "0.0.0"
    git push origin main --follow-tags
    git ls-remote --tags origin "v0.0.0*"
    ```
