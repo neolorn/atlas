@@ -79,7 +79,10 @@ import {
 } from './evaluator';
 import { RuntimeExtensions } from './extensions';
 import { FormattingSurface } from './formatting-runtime';
-import type { LocalizationPersistenceStore } from './persistence';
+import type {
+  LocaleRemovalReport,
+  LocalizationPersistenceStore,
+} from './persistence';
 import {
   type RelativeTimeOutcome,
   type RelativeTimePolicy,
@@ -365,6 +368,21 @@ export abstract class Localization {
    * hanging.
    */
   abstract cancelTransition(): void;
+  /**
+   * Drops the remembered locale from every configured store, and leaves the page where it is.
+   *
+   * Not a locale change: nothing on screen moves, and the next visit resolves from the URL, the
+   * client's languages and the default rather than from what was stored.
+   * `specs/03-locale-identity-and-resolution.spec.md` section 8 keeps the two apart because
+   * neither alone does what a reader asking to be forgotten means: forgetting leaves the page in
+   * the stored language, and the operation that moves the page records a new choice. Pair this
+   * with `changeLocale(locale, { remember: false })`.
+   *
+   * Resolves with what the removal reached. A store that implements no removal, and one whose
+   * removal threw, are both reported: a value dropped from one store and still held by another is
+   * read back at the next visit.
+   */
+  abstract forgetRememberedLocale(): Promise<LocaleRemovalReport>;
   /**
    * Adds something that has to agree before a locale change commits, and returns how to remove it.
    *
@@ -2308,7 +2326,12 @@ class LocalizationInternal {
         // carry the first guess forever, and changing their browser's language afterwards would
         // stop working. Decision section 7 keeps an explicit choice outside the resolution chain
         // for the same reason, and this is that rule on the way out.
-        this.localeResolution.persistLocale(snapshot, previousLocale);
+        // `remember: false` moves the page and records nothing. It is the half of forgetting that
+        // moves the reader: the only operation that changes the locale would otherwise store a new
+        // choice, so a reader asking to be forgotten would end up with a fresh one.
+        if (options.remember !== false) {
+          this.localeResolution.persistLocale(snapshot, previousLocale);
+        }
         const unloadedProgressive = progressive.filter(
           (scope) => !this.active?.scopes.has(scopeIdentity(scope)),
         );
@@ -2536,6 +2559,11 @@ class LocalizationInternal {
         ),
       ),
     );
+  }
+
+  forgetRememberedLocale(): Promise<LocaleRemovalReport> {
+    this.assertActive();
+    return this.localeResolution.forgetPersistedLocale();
   }
 
   /**
@@ -2914,6 +2942,10 @@ class RuntimeLocalization implements Localization {
 
   cancelTransition(): void {
     this.internal().cancelTransition();
+  }
+
+  forgetRememberedLocale(): Promise<LocaleRemovalReport> {
+    return this.internal().forgetRememberedLocale();
   }
 
   registerParticipant(

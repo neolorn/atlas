@@ -36,6 +36,39 @@ export interface LocalizationPersistenceStore {
    * writing rather than throwing.
    */
   write(locale: string): void | Promise<void>;
+  /**
+   * Drops the remembered locale, leaving the page in whatever language it is already in.
+   *
+   * Optional, and that is part of the port rather than an omission:
+   * `specs/03-locale-identity-and-resolution.spec.md` section 8 requires the port to stay
+   * implementable without it, so a store written against the two-method version keeps compiling.
+   * A store that offers none is reported as a store the removal did not reach, because a choice
+   * dropped from one store and still held by another is read back at the next visit.
+   *
+   * A store that cannot act where it is asked returns without acting, as `write` does.
+   */
+  forget?(): void | Promise<void>;
+}
+
+/** One store a removal did not reach, and why it did not. */
+export interface UnreachedLocaleStore {
+  /** The store's own id, as it names itself in diagnostics. */
+  readonly storeId: string;
+  /** `no-removal` for a store that implements none, `failed` for one whose removal threw. */
+  readonly reason: 'no-removal' | 'failed';
+}
+
+/**
+ * What forgetting a remembered locale managed to do.
+ *
+ * Returned rather than thrown, because a removal that reached three stores of four is neither a
+ * success nor an error: the choice is still in force and the application has to be able to say so.
+ */
+export interface LocaleRemovalReport {
+  /** Whether every configured store dropped the value. */
+  readonly complete: boolean;
+  /** The stores still holding one, empty when the removal reached all of them. */
+  readonly unreached: readonly UnreachedLocaleStore[];
 }
 
 /**
@@ -83,6 +116,9 @@ export function memoryStore(): LocalizationPersistenceStoreFactory {
       read: () => remembered,
       write: (locale: string) => {
         remembered = locale;
+      },
+      forget: () => {
+        remembered = undefined;
       },
     });
   };
@@ -251,6 +287,20 @@ export function cookieStore(
           ...(secure ? ['Secure'] : []),
         ].join('; ');
       },
+      forget: () => {
+        if (!browser) return;
+        // The same name, path and domain the write used. A browser matches a cookie on all three,
+        // so an expiry written with any of them different leaves the original where it was and
+        // adds a second one beside it.
+        document.cookie = [
+          `${name}=`,
+          `Path=${path}`,
+          'Max-Age=0',
+          `SameSite=${sameSite}`,
+          ...(options.domain === undefined ? [] : [`Domain=${options.domain}`]),
+          ...(secure ? ['Secure'] : []),
+        ].join('; ');
+      },
     });
   };
 }
@@ -290,6 +340,10 @@ export function localStorageStore(
         if (!browser) return;
         localStorage.setItem(key, locale);
       },
+      forget: () => {
+        if (!browser) return;
+        localStorage.removeItem(key);
+      },
     });
   };
 }
@@ -314,6 +368,13 @@ export interface LocalizationProfileTransport {
   read(): string | undefined | Promise<string | undefined>;
   /** Sends a committed locale to wherever the application keeps the reader's preferences. */
   write(locale: string): void | Promise<void>;
+  /**
+   * Clears the reader's remembered preference, where the application offers that.
+   *
+   * Optional. A transport without one makes a store without one, which a removal reports as a
+   * store it did not reach rather than quietly counting as done.
+   */
+  forget?(): void | Promise<void>;
 }
 
 /**
@@ -334,5 +395,10 @@ export function profileStore(
       id: 'profile',
       read: async () => storedLocaleText(await transport.read()),
       write: (locale: string) => transport.write(locale),
+      // Present only where the transport has one, so a store built on a transport that cannot
+      // clear the preference says so by not offering the method.
+      ...(transport.forget === undefined
+        ? {}
+        : { forget: () => transport.forget?.() }),
     });
 }

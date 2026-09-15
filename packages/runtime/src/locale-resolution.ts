@@ -27,7 +27,11 @@ import {
   type LocalizationEventEmitter,
   RUNTIME_EVENT_CODES,
 } from './observability';
-import { type LocalizationPersistenceStore } from './persistence';
+import {
+  type LocaleRemovalReport,
+  type LocalizationPersistenceStore,
+  type UnreachedLocaleStore,
+} from './persistence';
 import { asDiagnostic, waitForSignal } from './runtime-safety';
 
 /**
@@ -214,6 +218,70 @@ export class LocaleResolution {
         }
       }
     });
+  }
+
+  /**
+   * Drops the remembered choice from every configured store, and says where it did not land.
+   *
+   * Queued behind whatever writes are already in flight rather than run beside them. A write that
+   * was queued when this was called is a choice made before it, and letting the two race would
+   * leave the store holding a value the reader has just asked to be rid of.
+   *
+   * `specs/03-locale-identity-and-resolution.spec.md` section 8 makes removal optional on the port
+   * and requires a store that offers none to count as one the removal did not reach: a value
+   * dropped from one store and still held by another is read back at the next visit, so a removal
+   * reported as complete while any store still holds it leaves the choice in force.
+   */
+  forgetPersistedLocale(): Promise<LocaleRemovalReport> {
+    const stores = this.context.persistence ?? [];
+    const removal = this.persistenceQueue.then(async () => {
+      const unreached: UnreachedLocaleStore[] = [];
+      for (const store of stores) {
+        const forget = store.forget?.bind(store);
+        if (forget === undefined) {
+          unreached.push(
+            Object.freeze({ storeId: store.id, reason: 'no-removal' as const }),
+          );
+          // No `reason`: the store did not fail, it has nothing to fail with.
+          this.context.observability?.emit({
+            code: RUNTIME_EVENT_CODES.persistence,
+            phase: 'persistence',
+            status: 'unavailable',
+            correlationId: store.id,
+          });
+          continue;
+        }
+        try {
+          await forget();
+          this.context.observability?.emit({
+            code: RUNTIME_EVENT_CODES.persistence,
+            phase: 'persistence',
+            status: 'succeeded',
+            correlationId: store.id,
+          });
+        } catch (error: unknown) {
+          unreached.push(
+            Object.freeze({ storeId: store.id, reason: 'failed' as const }),
+          );
+          this.context.observability?.emit({
+            code: RUNTIME_EVENT_CODES.persistence,
+            phase: 'persistence',
+            status: 'failed',
+            reason: asDiagnostic(error).code,
+            correlationId: store.id,
+          });
+        }
+      }
+      return Object.freeze({
+        complete: unreached.length === 0,
+        unreached: Object.freeze(unreached),
+      });
+    });
+    this.persistenceQueue = removal.then(
+      () => undefined,
+      () => undefined,
+    );
+    return removal;
   }
 
   async resolveInitialLocale(signal: AbortSignal): Promise<string> {

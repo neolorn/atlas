@@ -1376,6 +1376,15 @@ export interface LocaleChangeOptions {
    * clear it, which is what a change that leaves routing behind means.
    */
   readonly route?: LocalizationRouteSnapshot | null;
+  /**
+   * Whether this change is a choice to remember. Defaults to remembering it.
+   *
+   * `false` moves the page and writes nothing to the configured stores, which is the half of
+   * forgetting a preference that moves the reader: the operation that changes the locale is the
+   * only one that does, and it would otherwise record a fresh choice in place of the one just
+   * dropped. Pair it with `forgetRememberedLocale()`.
+   */
+  readonly remember?: boolean;
 }
 
 /**

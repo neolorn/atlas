@@ -140,6 +140,81 @@ describe('a remembered choice', () => {
   });
 });
 
+describe('a reader who asks to be forgotten', () => {
+  it('moves the page without recording a choice when the change says not to', async () => {
+    // The half that moves the reader. The only operation that changes the locale is the one that
+    // records a choice, so honouring the request with an ordinary change would store a fresh one
+    // in place of the one just dropped.
+    const store = memoryStore()();
+    const localization = setup([() => store]);
+    await localization.initialize();
+
+    await localization.changeLocale('ar-EG', { remember: false });
+    await settled();
+
+    expect(localization.snapshot()?.primaryLocale).toBe('ar-EG');
+    expect(await store.read()).toBeUndefined();
+  });
+
+  it('drops what is stored and leaves the page where it is', async () => {
+    // The other half. Forgetting alone leaves the reader looking at the language that was stored.
+    const store = memoryStore()();
+    const localization = setup([() => store]);
+    await localization.initialize();
+    await localization.changeLocale('ar-EG');
+    await settled();
+    expect(await store.read()).toBe('ar-EG');
+
+    const report = await localization.forgetRememberedLocale();
+
+    expect(report.complete).toBe(true);
+    expect(await store.read()).toBeUndefined();
+    expect(localization.snapshot()?.primaryLocale).toBe('ar-EG');
+  });
+
+  it('puts the next visit back where resolution would have placed it', async () => {
+    // The two used together, which is what a privacy page's control does. Neither alone is enough:
+    // one leaves the page in the stored language, the other stores a new choice.
+    const shared = memoryStore()();
+    const persistent: LocalizationPersistenceStoreFactory = () => shared;
+
+    const first = setup([persistent]);
+    await first.initialize();
+    await first.changeLocale('ar-EG');
+    await settled();
+
+    await first.forgetRememberedLocale();
+    await first.changeLocale('en-US', { remember: false });
+    await settled();
+
+    const second = setup([persistent]);
+    expect((await second.initialize()).primaryLocale).toBe('en-US');
+  });
+
+  it('names the stores it could not reach rather than reporting them done', async () => {
+    const withRemoval = memoryStore()();
+    const localization = setup([
+      () => ({
+        id: 'legacy',
+        read: () => undefined,
+        write: () => undefined,
+      }),
+      () => withRemoval,
+    ]);
+    await localization.initialize();
+    await localization.changeLocale('ar-EG');
+    await settled();
+
+    const report = await localization.forgetRememberedLocale();
+
+    expect(report.complete).toBe(false);
+    expect(report.unreached).toEqual([
+      { storeId: 'legacy', reason: 'no-removal' },
+    ]);
+    expect(await withRemoval.read()).toBeUndefined();
+  });
+});
+
 describe('a stored value that cannot be believed', () => {
   it('is ignored when it is not a locale this application offers', async () => {
     // A language removed in a previous release. Restoring it would render an interface nobody can
@@ -307,6 +382,37 @@ describe('the shipped stores', () => {
     expect((await setup([cookieStore()]).initialize()).primaryLocale).toBe(
       'ar-EG',
     );
+  });
+
+  it('expires the cookie it wrote, rather than writing a second one beside it', async () => {
+    // A browser matches a cookie on its name, path and domain, so an expiry written with any of
+    // the three different leaves the original where it is and adds an expired one next to it. The
+    // read-back is what tells the two apart: the value would still be there.
+    const localization = setup([cookieStore({ secure: false })]);
+    await localization.initialize();
+    await localization.changeLocale('ar-EG');
+    await settled();
+    expect(document.cookie).toContain('atlas-locale=ar-EG');
+
+    const report = await localization.forgetRememberedLocale();
+
+    expect(report.complete).toBe(true);
+    expect(document.cookie).not.toContain('atlas-locale=ar-EG');
+    expect((await setup([cookieStore()]).initialize()).primaryLocale).toBe(
+      'en-US',
+    );
+  });
+
+  it('removes what it kept in local storage', async () => {
+    const localization = setup([localStorageStore({ key: 'lang' })]);
+    await localization.initialize();
+    await localization.changeLocale('ar-EG');
+    await settled();
+    expect(localStorage.getItem('lang')).toBe('ar-EG');
+
+    await localization.forgetRememberedLocale();
+
+    expect(localStorage.getItem('lang')).toBeNull();
   });
 
   it('round-trips through local storage', async () => {

@@ -43,6 +43,24 @@ language the last one ended in. `localStorageStore` is browser-only. `profileSto
 for the case where the choice belongs in your own account record. Which store to use under server
 rendering is [About how a locale is resolved](../explanation/about-locale-resolution.md).
 
+## Let a reader clear it
+
+`forgetRememberedLocale()` drops the choice from every store you configured and leaves the page in
+the language it is already in. It resolves with a report naming every store the removal did not
+reach: one that implements no removal, and one whose removal failed. Check it, because the next
+visit reads from whichever store still holds a value.
+
+Forgetting does not move the reader, and `changeLocale` records a choice, so a control that offers
+to stop remembering the language is the two together:
+
+```text
+await localization.forgetRememberedLocale();
+await localization.changeLocale(configuration.defaultLocale, { remember: false });
+```
+
+Move to the default, or to whatever the visitor's client asks for. `remember: false` is what keeps
+that move from storing a fresh choice in place of the one just dropped.
+
 ## Assert that the switch is atomic
 
 `changeLocale(locale)` prepares everything the arriving locale needs and commits only when all of it
