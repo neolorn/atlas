@@ -10,6 +10,49 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The 0.x line is the alpha
 stage, then the betas, then the release candidates that carry the changes breaking an earlier call.
 
+## [1.3.0-rc.1] - 2026-09-15
+
+### Added
+
+- `LocalizedPageOutcome` in `@neolorn/atlas/core`, with `pageAbsent`, `pageGone` and
+  `pageOperationalFailure`. A page states that its address is not there, that it is gone, or that it
+  failed, and the response carries what it said.
+- `declarePageOutcome` in `@neolorn/atlas/http`, which states the same three from a renderer.
+- `RouteLocalizationContext.pageOutcome`, so the `document` callback writes a head for the state the
+  page is in rather than for the route that matched.
+- `outcomeDocuments` on `provideLocalizedRouter`, which titles the three responses that have no
+  route identity: not found, gone, and an unsupported locale.
+- `documentMessage(handle, inputs)`, so a document title or description carries the values its
+  sentence takes. A handle that takes values with none bound is refused before any provider is built.
+- `createLocalizedServerSeat` in `@neolorn/atlas/testing`, which answers an address through the
+  request handler and reads back the status, the headers, the resolution and the head, with no
+  socket, no built bundle and no browser.
+- `localizedInput` binds to `textarea` as well as to `input`.
+- `LocalizedServerRouteDeclaration.prerender` and `SitemapRouteDeclaration.prerender` take a
+  function as well as a list, so a route's prerendered parameter values can be read at build time.
+- `Localization.forgetRememberedLocale`, which asks every configured store to drop the stored choice
+  and reports the stores it did not reach. `forget` is optional on `LocalizationPersistenceStore`
+  and on `LocalizationProfileTransport`.
+- `changeLocale(locale, { remember: false })`, which moves the page without recording a choice.
+- `withLocaleAnnouncement` accepts a format function that returns nothing, for an application whose
+  own live region announces the change.
+
+### Changed
+
+- A declared absence or removal withdraws the canonical link and the `hreflang` cluster from the
+  document, and is classified private and not stored. A declared operational failure leaves the
+  address's indexing alone.
+- A write to a localized field that arrives before its profile is held and rendered once the profile
+  is bound, rather than throwing NG0950.
+- `specs/07-routing-rendering-and-seo.spec.md` section 5 states the declaration, its carrier, and
+  what it means where there is no response to reach; a new section 12 gives the document head an
+  owner; sections 13 to 17 are the previous 12 to 16.
+
+### Fixed
+
+- The Open Graph block is written only where an image is supplied. A declaration carrying a site
+  name and no image wrote `og:image` with no value and a card tag beside it.
+
 ## [1.2.0] - 2026-09-15
 
 ### Fixed
