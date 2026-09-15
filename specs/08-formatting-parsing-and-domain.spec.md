@@ -199,6 +199,17 @@ Field parsing follows this document. The control value, the selection, an active
 touched, dirty, and pending state, issue precedence, asynchronous validation, acceptance, and
 submission stay owned by the form and domain system.
 
+What kind of value a field holds is independent of the element it is written with. An Atlas release
+MUST NOT restrict localized input to one element type where the form system binds a value accessor
+to more than one.
+
+A consumer application's own field component stands between the form and the localized field, which
+is the ordinary shape of a design system. The form system writes to the outermost accessor during
+its own binding pass, and that write can land before the inner field has been given the profile it
+reads and writes in. An Atlas release MUST hold such a write until it can be honoured rather than
+fail on it, and MUST NOT require a consumer application to discover the ordering and buffer around
+it, because the order of the two bindings is the framework's rather than the application's.
+
 Visible messages derive reactively from invariant issue state and committed locale state. An Atlas
 release MUST update the wording on a locale change while preserving the control value, the
 selection, the composition, the dirty, touched, and pending state, the validation result, and the

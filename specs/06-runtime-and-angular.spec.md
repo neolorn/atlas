@@ -248,11 +248,25 @@ let that disposal reach another context or a consumer application's own store.
 
 ## 12. The testing surface
 
-`@neolorn/atlas/testing` exports six things: the testing providers, an in-memory catalog loader
+`@neolorn/atlas/testing` exports seven things: the testing providers, an in-memory catalog loader
 factory, a controllable participant, a controller over deferred catalog loads and participant
-attempts, a rendered-text helper, and an environment reset. An Atlas release MUST provide
-deterministic control over deferred loading and participant outcomes through them, without a network
-call and without shared global state.
+attempts, a rendered-text helper, an environment reset, and a server seat. An Atlas release MUST
+provide deterministic control over deferred loading and participant outcomes through them, without a
+network call and without shared global state.
+
+The server seat answers an address the way a deployment would and hands back what was answered. What
+a consumer application has to be able to assert about its own use of Atlas is the response: the
+status, the headers, and the head. None of the three is reachable from a component seat, because
+each is decided by the request handler rather than by the page, so a consumer application with only
+a component seat writes a server of its own, builds it, starts it on a port, and reads its answers
+back over a socket. An Atlas release MUST supply the seat, MUST answer through the same request
+handler a deployment uses rather than through a second implementation of the same rules, and MUST
+NOT require a listening socket, a built bundle, or a browser to use it.
+
+An Atlas release MUST make a declared page outcome observable through that seat. Section 5 of
+`07-routing-rendering-and-seo.spec.md` requires the declaration to travel over a channel no response
+exposes and no client can write, so nothing outside the release can otherwise observe whether it was
+carried.
 
 The environment reset is there because an Angular test host reuses one DOM across spec files, which
 gives every file in a worker the same address bar, cookie jar, and web storage, and Atlas resolves

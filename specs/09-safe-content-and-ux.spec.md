@@ -220,7 +220,10 @@ owns, and MUST announce it only after the transition commits.
 
 The default announcement is the new locale's own name in that locale, which is what a person
 switching into it reads. A consumer application MAY replace the wording, and an Atlas release MUST
-treat that as a replacement of the wording alone rather than of the decision to announce.
+treat that as a replacement of the wording alone rather than of the decision to announce. A
+replacement that supplies no wording is still a replacement of the wording. An application
+announcing the change through a region of its own supplies none, so the change is not announced
+twice, and an Atlas release MUST accept that rather than treat an empty replacement as a mistake.
 
 An Atlas release MUST NOT announce an entire page, a pending locale, a failed switch as a success,
 or every translated node. Withdrawing document ownership withdraws the announcement with it, because

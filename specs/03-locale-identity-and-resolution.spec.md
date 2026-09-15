@@ -151,6 +151,23 @@ back: persisting it would turn the first negotiated answer into a permanent one,
 to the visitor's own preferences would stop having any effect. A write reaches every configured
 store.
 
+A remembered choice can be removed, and removing it is not a locale change. An Atlas release MUST
+supply the two separately: one operation that forgets what is stored and leaves the page where it
+is, and one locale change that moves the page without recording a choice. Neither alone is enough.
+Forgetting alone leaves the page in the language that was stored. The only operation that moves the
+page records a choice, so honouring the request with that operation stores a new one. Used together,
+the two put a visitor back where resolution would have placed them with nothing stored.
+
+A removal reaches every configured store, for the reason a write does: a choice removed from one
+store and still held by another is read back at the next visit. An Atlas release MUST report a
+removal that could not reach every store, because a removal reported as complete while a store still
+holds the value leaves the choice in force.
+
+Removal is not required of a store. An Atlas release MUST keep the persistence port implementable
+without it and MUST treat a store that offers none as a store the removal did not reach, because the
+port is what a consumer application writes against and a release that added a required method to it
+would stop every store written against the previous one from compiling.
+
 A persistence failure MUST NOT corrupt active state, and a write for an older decision MUST NOT
 supersede a newer one.
 

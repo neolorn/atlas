@@ -29,15 +29,15 @@ entry point, no dependency, and no compatibility obligation until it exists.
 
 `@neolorn/atlas` publishes seven entry points:
 
-| Entry point              | Carries                                                                   | Exists because                           |
-| ------------------------ | ------------------------------------------------------------------------- | ---------------------------------------- |
-| `@neolorn/atlas`         | The runtime and its Angular integration.                                  | It is the package.                       |
-| `@neolorn/atlas/core`    | Atlas's vocabulary, locale profiles, and route classification.            | It loads without Angular.                |
-| `@neolorn/atlas/http`    | The locale request handler and its Node adapter.                          | It loads without Angular.                |
-| `@neolorn/atlas/router`  | Localized routing and `provideLocalizedRouter(...)`.                      | It carries an optional peer.             |
-| `@neolorn/atlas/forms`   | The localized input control.                                              | It carries an optional peer.             |
-| `@neolorn/atlas/ssr`     | `provideLocalizedServerRendering(...)`.                                   | It carries an optional peer.             |
-| `@neolorn/atlas/testing` | Test composition, controllable loading and participants, a render helper. | It must stay out of a production bundle. |
+| Entry point              | Carries                                                                                  | Exists because                           |
+| ------------------------ | ---------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `@neolorn/atlas`         | The runtime and its Angular integration.                                                 | It is the package.                       |
+| `@neolorn/atlas/core`    | Atlas's vocabulary, locale profiles, and route classification.                           | It loads without Angular.                |
+| `@neolorn/atlas/http`    | The locale request handler and its Node adapter.                                         | It loads without Angular.                |
+| `@neolorn/atlas/router`  | Localized routing and `provideLocalizedRouter(...)`.                                     | It carries an optional peer.             |
+| `@neolorn/atlas/forms`   | The localized input control.                                                             | It carries an optional peer.             |
+| `@neolorn/atlas/ssr`     | `provideLocalizedServerRendering(...)`.                                                  | It carries an optional peer.             |
+| `@neolorn/atlas/testing` | Test composition, controllable loading and participants, a render helper, a server seat. | It must stay out of a production bundle. |
 
 A secondary entry point exists for one of three reasons, and for no other: it carries an optional
 peer dependency the primary must not require; it loads in an environment the primary cannot; or it
@@ -53,10 +53,10 @@ primary re-exports the core surface, so a consumer using the primary need not kn
 exists.
 
 `testing` is the bundling case. It ships the runtime composition a test needs, deterministic control
-over deferred catalog loads and participants, in-memory catalog loaders, a rendered-text helper, and
-an environment reset. It MUST NOT ship the pseudo-localization transform, which is build-time work
-under `10-compiler-and-tooling.spec.md`: shipping it in a runtime entry point would put it in a
-production bundle behind a flag.
+over deferred catalog loads and participants, in-memory catalog loaders, a rendered-text helper, an
+environment reset, and a seat that answers an address through the request handler. It MUST NOT ship
+the pseudo-localization transform, which is build-time work under `10-compiler-and-tooling.spec.md`:
+shipping it in a runtime entry point would put it in a production bundle behind a flag.
 
 A consumer MUST import only declared package exports. Deep imports, internal paths, generated
 private paths, source paths, and source-tree aliases are unsupported.

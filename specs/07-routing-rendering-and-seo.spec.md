@@ -156,7 +156,8 @@ title, and route-scoped providers are reached by every navigation that reaches t
 
 ## 5. Navigation and HTTP outcomes
 
-Three outcome classes stay distinct, as they do in `06-runtime-and-angular.spec.md` section 8: an
+Three outcome classes stay distinct, as they do in
+`11-diagnostics-and-observability.spec.md` section 3: an
 operational failure, a requested localized representation that is unavailable, and a valid
 consumer-domain outcome. An Atlas release MUST preserve a consumer-domain outcome without
 reinterpreting it, and MUST NOT turn a missing translation into a missing entity.
@@ -180,28 +181,73 @@ a structurally unsafe target with 400 before presentation routing. An Atlas rele
 another language as the locale that was asked for.
 
 That table governs routing outcomes and nothing else. An operational failure is not one: it is the
-consumer application's own, as section 8 of `06-runtime-and-angular.spec.md` classes it, and
-serving maintenance or reporting a render that failed is ordinary rather than exceptional. The
-status that reports one is therefore the consumer application's to declare, and an Atlas release
-MUST carry a declared operational failure rather than substitute the status of the address it
-arrived at. An Atlas release MUST NOT read a status a renderer did not declare as a declaration,
-because an accidental failure and a deliberate one arriving as the same value cannot be told apart.
-The means of declaring one is a surface an Atlas release supplies, and a release that supplies none
-leaves a consumer application with no way to state an operational failure at an address that
-resolved.
+consumer application's own, as section 3 of `11-diagnostics-and-observability.spec.md` classes it,
+and serving maintenance or reporting a render that failed is ordinary rather than exceptional. The
+status that reports one is therefore the consumer application's to declare.
 
-An Atlas release MUST accept that declaration as a result distinct from the response a renderer
+Two of the three outcome classes depend on facts an address cannot supply. A routing outcome from
+the table above depends partly on what the address states and partly on what only the page knows:
+whether the entity the address names is absent, and whether it has been permanently removed. An
+operational failure depends on nothing the address states. An Atlas release MUST supply a
+declaration that carries both, and a release that supplies none leaves a consumer application with
+no way to state either at an address that resolved.
+
+One declaration, made in either of two places. A page states what it discovered while rendering,
+and a renderer states what it decided with no page rendered at all, which is what serving
+maintenance and reporting a failed render both are. An Atlas release MUST accept the declaration
+from both and MUST give them one type, because the two differ only in where the declaration is
+made. A release that gave them separate shapes would require an application moving a check from a
+renderer into a page to rewrite what the check declares.
+
+The two arms are not spelled the same way. An operational failure carries its own status, because
+the release has no table for it. A routing outcome carries the fact and not the status: an Atlas
+release MUST take the absence of an entity and its permanent removal as facts and MUST derive the
+status from the table above, because the table above is the release's and an application writing a
+status into a declaration would be restating a rule the release already applies.
+
+An Atlas release MUST accept a declaration as a result distinct from the response a renderer
 otherwise returns, so a renderer that returns an ordinary response is unaffected and no status
-arrives as a declaration by accident. Where the two can disagree the narrower rule holds: an Atlas
-release MUST carry a declared status where the address resolved to a route it serves, and MUST send
-the status the table above gives wherever the address resolved to anything else, because a consumer
-application declaring maintenance cannot know which addresses the release answered from the table,
-and a rule it cannot reason about is not one it can apply. An Atlas release MUST report a
-declaration it did not carry where a developer will see it during development, naming the address,
-the status declared, and the status sent, and MUST NOT report it more than once for one pair of
-statuses, because the addresses it can arrive at are unbounded and supplied by the request. A
-carried declaration is not the address's representation, so an Atlas release MUST classify the
-response carrying it as private and not stored, whatever the address's own classification is.
+arrives as a declaration by accident. An Atlas release MUST NOT read a status a renderer did not
+declare as a declaration, because an accidental failure and a deliberate one arriving as the same
+value cannot be told apart.
+
+A declaration is also made from inside a render, which is where the fact is discovered. An Atlas
+release MUST carry it from the render to the response over a channel the two already share, MUST
+NOT carry it in a header or anywhere else a client can write or a response can expose, and MUST
+treat a render that declared nothing as the address's own outcome rather than as a declaration of
+success. Where the render and the handler do not share that channel there is no declaration to
+read, and an Atlas release MUST report that during development rather than answer from the table as
+though the page had said nothing, because the two produce the same response and only the first is a
+wiring fault.
+
+A declaration governs the render that made it and nothing else. An Atlas release MUST NOT let a
+declaration reach a second render at the same address, a second navigation, or a second request,
+which is the rule section 2 already states for a parameter-spelling declaration and holds here for
+the same reason.
+
+Where the two can disagree the narrower rule holds: an Atlas release MUST carry a declaration where
+the address resolved to a route it serves, and MUST send the status the table above gives wherever
+the address resolved to anything else, because a consumer application declaring an outcome cannot
+know which addresses the release answered from the table, and a rule it cannot reason about is not
+one it can apply. An Atlas release MUST report a declaration it did not carry where a developer
+will see it during development, naming the address, what was declared, and what was sent, and MUST
+NOT report it more than once for one such pair, because the addresses it can arrive at are
+unbounded and supplied by the request.
+
+A carried operational failure is not the address's representation, so an Atlas release MUST
+classify the response carrying it as private and not stored, whatever the address's own
+classification is. A carried routing outcome is the address's representation and keeps the
+classification the table gives that outcome.
+
+A declaration has no response to reach on a client navigation, and an Atlas release MUST NOT
+synthesize one. What it governs there is the document and the route context, under section 12.
+
+A declaration made during prerendering has no request to answer. Both arms describe a page the
+build cannot write: an absence states that a page the build was told to render does not exist, and
+an operational failure states that the render meant to produce it did not succeed. An Atlas release
+MUST fail the build for either and MUST NOT write the page. Section 9 already forbids prerendering
+a route whose existence cannot be proven at build time, and a file written from a failed render is
+served afterwards as a successful one, with no status left to say otherwise.
 
 An Atlas release MUST build a locale-entry redirect's destination in the locale it resolved to, so
 the redirect lands on a canonical URL in one hop. An address that already states its locale is authoritative,
@@ -232,8 +278,11 @@ report the call in development, naming the address as written, the canonical add
 operation that does change locale.
 
 An address the projection does not contain resolves to no route identity. An Atlas release MUST
-commit the locale, yield no route context, and supply no representation of its own, because which
-page answers a missing address belongs to the application.
+commit the locale, yield no route context, and supply no body of its own, because which page
+answers a missing address belongs to the application. The head is not part of that body. An Atlas
+release MUST write the head of a response at such an address under section 12: a response whose
+title is empty and whose description belongs to whichever page was on screen before it fails the
+coherence requirement of section 15.
 
 ## 6. Canonicalization, query, and fragment
 
@@ -354,6 +403,15 @@ locale through the route's codecs. An Atlas release MUST fail the build for a va
 representation in some locale rather than omit it, because omitting it ships a page that exists in
 one language and is missing in another.
 
+A set of values that has to be fetched cannot be written where the render table is declared, and a
+release that took only values written in place would limit prerendering to sets small enough to
+write out. An Atlas release MUST accept the values from a function the build calls as well as from
+a set written in place, and MUST serialize both the same way. Serializing both the same way is the
+requirement rather than a convenience: an emitted address states its path and its render mode and
+not the locale it belongs to, so an application left to complete the expansion itself would have to
+recover the locale from the path text before it could choose a codec, which is the serialization
+the release already performs.
+
 A localized address is frequently non-ASCII. The build writes a prerendered page at the decoded
 spelling of its address while a browser requests it percent-encoded, so a host that compares the
 two as text finds nothing. A consumer application's host MUST resolve a request for a directory to
@@ -420,7 +478,58 @@ its own whose entire content is the two imports that put both namespaces into a 
 set. An index file is validated against the index schema directly, because the two sitemap schemas
 share a target namespace.
 
-## 12. Social metadata
+## 12. The document head
+
+An Atlas release owns the head of every response it answers, and what goes in it comes from three
+places. A route declares its own title and description once, against the route identity. A consumer
+application supplies what a catalog cannot hold, per navigation, from what the resolution says. A
+page declares what neither could know, during the render that discovered it. An Atlas release MUST
+read all three, MUST apply them in that order with a later field replacing an earlier one, and MUST
+NOT require a consumer application to supply a field at more than one of them.
+
+The title and the description are sentences a visitor reads, so they are authored as messages
+rather than in a metadata format of their own. An Atlas release MUST resolve a declared message
+with the inputs declared beside it, MUST refuse a declaration naming a message that takes inputs
+with none bound to it, and MUST refuse it where the declaration is built rather than where the page
+is visited. A release that accepted one and resolved it with no inputs would write the message with
+its placeholders unfilled, and nothing would report it.
+
+A page's declaration arrives after the navigation that carries it has committed, because the fetch
+that produces it finishes after activation. An Atlas release MUST re-project the document when one
+arrives rather than leave the head as it was built, MUST stamp it with the navigation that made it,
+MUST replace a committed declaration outright when a navigation commits, including when the
+arriving page declares nothing, and MUST discard the declaration of a navigation that was
+cancelled. These are the rules section 2 states for a parameter-spelling declaration, and they hold
+here because the hazard is the same: a head describing the previous page.
+
+The head is written whole. An Atlas release MUST remove everything it wrote for the previous
+document before writing the next, so no head carries a mixture of two pages, and MUST NOT require a
+consumer application to clear a field by declaring it empty.
+
+What the address implies is derived rather than merged. The canonical URL and the alternate cluster
+of section 10, the social block of section 13, and the robots metadata of section 14 are read from
+the outcome in force for this render rather than carried over from the projection, so a declared
+absence or removal withdraws what the projection would have claimed. An Atlas release MUST
+recompute them after a declaration and MUST NOT leave a canonical or an alternate standing on a
+response the page has declared absent or removed, because an alternate link is a public claim that
+the same page exists in another language and section 10 already forbids one on a missing or gone
+response.
+
+An indexing class may be narrowed by a declaration and MUST NOT be widened by one. A page may
+declare that it is not to be indexed today; it MUST NOT declare itself indexable where the route's
+own class under section 14 says otherwise, because that class is a property of the address and a
+page that could raise it could publish an address the application withheld.
+
+A response with no route identity has no route-keyed declaration to read, and that does not make
+its head the application's to write by hand. A consumer application declares one document per
+outcome class instead of per route: for an address that named no route, for one whose entity was
+declared removed, and for a locale the deployment does not serve. An Atlas release MUST read those
+declarations for a response of the matching class, MUST author them as messages so that catalog
+completeness answers for them under the same diagnostic as every other message rather than under a
+second mechanism, and MUST report a class with no declaration when a response of that class is
+answered, because the response is otherwise served with no title.
+
+## 13. Social metadata
 
 Social preview metadata is completed jointly. A consumer application supplies what only it knows,
 the preview image, its alternative text, the site name, and the card format. An Atlas release
@@ -443,7 +552,7 @@ Open Graph properties are addressed by property and card metadata by name. An At
 emit a card tag only where the card format has no Open Graph equivalent, because the card processor
 falls back to Open Graph.
 
-## 13. Indexing classes
+## 14. Indexing classes
 
 An Atlas release models three indexing classes, indexable, non-indexable, and private, and they
 drive the robots metadata, the robots header, canonical and alternate eligibility, and sitemap
@@ -470,7 +579,7 @@ the HTTP header where the host integration supports both. A robots directive is 
 and MUST NOT be relied on by a consumer application as authentication or confidentiality, and a
 robots file does not replace it, canonicalization, or authorization.
 
-## 14. Error presentation and coherence
+## 15. Error presentation and coherence
 
 An Atlas release MAY render an unsupported-locale response in a last known supported presentation
 locale while stating that the requested locale was not activated. An Atlas release MUST NOT mutate locale persistence,
@@ -498,7 +607,7 @@ Machine identifiers, URLs, schema names, enum values, currencies, instants, and 
 machine data. A human-language field uses its message result or its participant result, and an
 Atlas release MUST NOT admit a consumer payload into the localization snapshot.
 
-## 15. Security and cache boundaries
+## 16. Security and cache boundaries
 
 An Atlas release MUST take canonical origins and redirect targets from trusted configuration rather
 than from a request-controlled host or header, and MUST NOT let a locale switch create an open
@@ -515,7 +624,7 @@ text, so an application writes the set with one loop and gains a header a later 
 without changing a line. Where a classification's correctness would depend on the duration supplied
 with it, the classification is wrong.
 
-## 16. Primary references
+## 17. Primary references
 
 - RFC 3986, Uniform Resource Identifier (URI): Generic Syntax:
   `https://www.rfc-editor.org/rfc/rfc3986`
