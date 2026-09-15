@@ -376,7 +376,7 @@ const SELECTS = Object.freeze({
   withFormattingContext:
     'Sets what every formatter starts from: the numbering system, the calendar, the time zone, and the currency display.',
   withLocaleAnnouncement:
-    'Announces a locale change to a screen reader, which is otherwise a silent event.',
+    'Replaces the wording of the locale-change announcement Atlas already makes. Returning nothing leaves the announcing to a live region of your own.',
   withLocaleSources:
     'Inserts a locale source of your own into the order Atlas asks in.',
   withLocalizationClock:

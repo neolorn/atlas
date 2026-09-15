@@ -170,7 +170,7 @@ interface RecoveryMessageFeature extends LocalizationFeature<'recovery-message'>
 }
 
 interface LocaleAnnouncementFeature extends LocalizationFeature<'locale-announcement'> {
-  readonly format: (snapshot: LocalizationSnapshot) => string;
+  readonly format: (snapshot: LocalizationSnapshot) => string | undefined;
 }
 
 interface LocalizationClockFeature extends LocalizationFeature<'localization-clock'> {
@@ -627,11 +627,17 @@ export function withoutDocumentLocale(): LocalizationFeature<'document-locale'> 
  * application's and can be in the language just arrived at. Called once per commit, and what it
  * returns goes into a live region.
  *
- * Without it Atlas announces the locale's own name for itself, which is correct and says nothing
- * about what the reader is now looking at.
+ * Returning `undefined` replaces the wording with none, which is what an application announcing the
+ * change through a region of its own needs: the change is then announced once rather than twice.
+ * `specs/09-safe-content-and-ux.spec.md` section 11 requires that to be accepted rather than read
+ * as a mistake, so nothing is thrown and nothing is reported. The region stays where it is, saying
+ * nothing, and `withoutDocumentLocale()` is what removes it.
+ *
+ * Without this feature Atlas announces the locale's own name for itself, which is correct and says
+ * nothing about what the reader is now looking at.
  */
 export function withLocaleAnnouncement(
-  format: (snapshot: LocalizationSnapshot) => string,
+  format: (snapshot: LocalizationSnapshot) => string | undefined,
 ): LocalizationFeature<'locale-announcement'> {
   return freezeFeature<LocaleAnnouncementFeature>({
     ɵkind: 'locale-announcement',
@@ -986,7 +992,9 @@ class LocaleAnnouncementCommitHook implements LocalizationCommitHook {
   constructor(
     private readonly document: Document,
     enabled: boolean,
-    private readonly format: (snapshot: LocalizationSnapshot) => string,
+    private readonly format: (
+      snapshot: LocalizationSnapshot,
+    ) => string | undefined,
   ) {
     // Built now rather than at the first announcement. A live region has to be in the accessibility
     // tree before its text changes, because assistive technology reports a change to a region it is
@@ -1027,7 +1035,17 @@ class LocaleAnnouncementCommitHook implements LocalizationCommitHook {
       this.previousLocale = snapshot.primaryLocale;
       return;
     }
-    const message = this.format(snapshot).normalize('NFC');
+    const wording = this.format(snapshot);
+    if (wording === undefined) {
+      // A replacement that supplies no wording, which is how an application announcing the change
+      // through its own region says so. The sequence still moves, so an announcement queued for a
+      // locale this commit has already left is dropped rather than read out after it.
+      this.previousLocale = snapshot.primaryLocale;
+      this.sequence += 1;
+      this.pending = undefined;
+      return;
+    }
+    const message = wording.normalize('NFC');
     if ([...message].length > 512 || /[\u0000-\u001f\u007f]/u.test(message)) {
       throw new LocalizationError({
         code: 'effect-failed',

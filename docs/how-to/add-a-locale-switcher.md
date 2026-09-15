@@ -33,8 +33,18 @@ copied, and seen in the status bar.
 
 ## Announce the change
 
-`withLocaleAnnouncement` tells a screen reader that the page changed language. Without it the words
-change with no announcement.
+A screen reader is told the page changed language whether or not you ask. Atlas announces the
+arriving locale's own name, in that locale, into a live region it owns.
+
+`withLocaleAnnouncement` replaces that wording and nothing else. Take it when the language's name is
+not what you want said. It takes a function from the snapshot that has just committed to the
+sentence to announce, so the wording is yours and can be in the language just arrived at.
+
+If your application already announces the change through a live region of its own, return nothing.
+The change is then announced once, by you, and Atlas's region stays in the document saying nothing.
+
+Nothing removes the region. `withoutDocumentLocale()` removes it, along with everything else Atlas
+writes to the document, and is the statement that the document is not Atlas's to touch.
 
 ## Remember the choice
 
