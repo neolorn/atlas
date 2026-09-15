@@ -13,7 +13,6 @@ import { configuration } from '#i18n';
 import { catalogLoaders } from '#i18n/catalog-loaders';
 import { catalogSet } from '#i18n/catalog-set';
 import { recoveryPayload } from '#i18n/recovery-payload';
-import { providerId, scopeId } from '#i18n/shell';
 
 import { atlasRuntimeExtensions } from './runtime-extensions';
 
@@ -40,8 +39,6 @@ import { atlasRuntimeExtensions } from './runtime-extensions';
  * injector for that reason, and requires a coordinated overlay to change with the primary
  * commit rather than after it.
  */
-
-const shellScope = { providerId, scopeId } as const;
 
 interface RecordingAdapter extends LocalizationOverlayAdapter {
   readonly applied: string[];

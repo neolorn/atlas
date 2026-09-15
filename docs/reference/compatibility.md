@@ -44,6 +44,7 @@ browser-only application installs none of the three.
 | ------------------------------- | --------------------------- | ---------- | ------- |
 | Atlas development row           | `22.1.3` (tooling `22.1.7`) | `6.0.3`    | `7.8.2` |
 | Angular patch compatibility row | `22.0.4`                    | `6.0.3`    | `7.8.2` |
+| Demanding compiler options      | `22.1.3` (tooling `22.1.7`) | `6.0.3`    | `7.8.2` |
 | Lowest supported versions       | `22.0.0`                    | `6.0.2`    | `7.4.0` |
 
 Each row builds a real application against the packages and runs it. The lower bound row's

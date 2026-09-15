@@ -23,7 +23,6 @@ import { catalogLoaders } from '#i18n/catalog-loaders';
 import { catalogSet } from '#i18n/catalog-set';
 import { recoveryPayload } from '#i18n/recovery-payload';
 import { routeProjection } from '#i18n/routes';
-import { providerId, scopeId } from '#i18n/shell';
 
 import { atlasRuntimeExtensions } from './runtime-extensions';
 import { routePolicy, appRouteProjection } from './localization.routes';
@@ -41,8 +40,6 @@ import { routePolicy, appRouteProjection } from './localization.routes';
  * prefix has stated nothing; answering the default there would make every later source
  * unreachable, and the consumer's declared order would be decoration.
  */
-
-const shellScope = { providerId, scopeId } as const;
 
 interface Environment {
   readonly sources?: readonly LocalizationLocaleSource[];

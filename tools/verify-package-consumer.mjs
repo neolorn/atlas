@@ -299,6 +299,18 @@ assert.ok(firstGeneration.result.catalogs >= 2);
 assert.ok(firstGeneration.result.messages >= 4);
 assert.ok(firstGeneration.result.routes >= 2);
 
+// ATL1401 forwards a TypeScript finding from the consumer's own program, so one raised here is a
+// report against the application's own lines. The fixture compiles under its own build, which
+// leaves the generated modules the analysis reads in place of them as the thing that does not.
+const forwardedTypeFindings = firstGeneration.diagnostics.filter(
+  ({ code }) => code === 'ATL1401',
+);
+assert.deepEqual(
+  forwardedTypeFindings,
+  [],
+  `Generation forwarded TypeScript findings against the consumer's own source:\n${JSON.stringify(forwardedTypeFindings, null, 2)}`,
+);
+
 const generatedManifestPath = resolve(
   consumerRoot,
   'src/generated/i18n/.atlas-manifest.json',

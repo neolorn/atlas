@@ -1829,8 +1829,11 @@ export function analyzeAtlasApplication(
       );
       continue;
     }
+    // Sliced by the prefix's own length, so the path spells the module a finding is located in.
     const suffix =
-      module.specifier === '#i18n' ? 'index' : module.specifier.slice(7);
+      module.specifier === '#i18n'
+        ? 'index'
+        : module.specifier.slice('#i18n/'.length);
     const path = resolve(virtualRoot, `${suffix}.ts`);
     virtualPaths.set(module.specifier, path);
     virtualSources.set(normalizePath(path), module.contents);

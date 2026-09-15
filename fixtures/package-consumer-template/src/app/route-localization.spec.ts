@@ -16,7 +16,6 @@ import { catalogLoaders } from '#i18n/catalog-loaders';
 import { catalogSet } from '#i18n/catalog-set';
 import { recoveryPayload } from '#i18n/recovery-payload';
 import { routeProjection } from '#i18n/routes';
-import { providerId, scopeId } from '#i18n/shell';
 import {
   providerId as lazyProviderId,
   scopeId as lazyScopeId,

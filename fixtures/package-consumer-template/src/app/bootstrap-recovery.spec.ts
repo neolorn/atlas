@@ -35,7 +35,6 @@ import { atlasRuntimeExtensions } from './runtime-extensions';
  * proves recovery works on the object while saying nothing about whether it can ever be seen.
  */
 
-const scope = { providerId, scopeId } as const;
 const sourceIdentity = `${providerId}:${scopeId}:en-US` as const;
 
 @Component({
@@ -133,7 +132,7 @@ describe('bootstrap when a catalog cannot load', () => {
   });
 
   it('publishes no partial runtime behind the recovery surface', async () => {
-    const host = mountHost();
+    mountHost();
 
     const application = await bootstrapApplication(RecoveryHost, {
       providers: [

@@ -33,6 +33,33 @@ assertContained(consumerRoot, temporaryRoot);
 await rm(consumerRoot, { force: true, recursive: true });
 await mkdir(temporaryRoot, { recursive: true });
 await cp(templateRoot, consumerRoot, { recursive: true });
+
+// Sources a row adds to the template, copied over it. A row that needs application code the other
+// rows do not have declares the directory holding it rather than the template carrying code every
+// row must then keep compiling. That separation is what lets one row be the discriminator for a
+// defect: the code that would meet it exists in that row and nowhere else.
+if (consumerProfile.overlay !== undefined) {
+  const overlayRoot = resolve(workspaceRoot, consumerProfile.overlay);
+  assertContained(overlayRoot, workspaceRoot);
+  await cp(overlayRoot, consumerRoot, { recursive: true });
+}
+
+// The compiler this row's application uses. Analysis adopts a consumer's own options, so a row
+// that changes them changes the program every Atlas diagnostic is computed against.
+if (consumerProfile.compilerOptions !== undefined) {
+  const tsconfigPath = resolve(consumerRoot, 'tsconfig.json');
+  const tsconfig = JSON.parse(await readFile(tsconfigPath, 'utf8'));
+  tsconfig.compilerOptions = {
+    ...tsconfig.compilerOptions,
+    ...consumerProfile.compilerOptions,
+  };
+  await writeFile(
+    tsconfigPath,
+    `${JSON.stringify(tsconfig, null, 2)}\n`,
+    'utf8',
+  );
+}
+
 const lockPath = resolve(lockRoot, consumerName, 'pnpm-lock.yaml');
 const lockExists = await lstat(lockPath).then(
   (entry) => entry.isFile(),

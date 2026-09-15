@@ -24,12 +24,7 @@ import {
   provideLocalizedRouter,
 } from '@neolorn/atlas/router';
 import { provideLocalization } from '#i18n';
-import { providerId, scopeId } from '#i18n/shell';
 import { messages } from '#i18n/shell';
-import {
-  providerId as lazyProviderId,
-  scopeId as lazyScopeId,
-} from '#i18n/lazy';
 
 import { routes } from './app.routes';
 import { localeCookie } from './locale-cookie';

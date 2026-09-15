@@ -905,9 +905,11 @@ function compileAtlasProjectCore(
     analysis === undefined ? [] : deferredScopeIds(graph.value, analysis);
 
   const contracts = generateAtlasContracts(graph.value, {
-    ...(deferredScopes.length === 0
-      ? {}
-      : { deferredScopeIds: deferredScopes }),
+    // Passed whenever the pass ran, empty included. An analysis that found nothing behind a lazy
+    // boundary knows that every scope is needed at startup, and a generation with no analysis
+    // knows nothing about either; omitting the option for both would collapse the two answers the
+    // generated table exists to tell apart.
+    ...(analysis === undefined ? {} : { deferredScopeIds: deferredScopes }),
     ...(recoveryMessageIdentities.length === 0
       ? {}
       : { recoveryMessageIdentities }),

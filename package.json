@@ -54,6 +54,8 @@
     "verify:focused-consumers": "node ./tools/verify-focused-package-consumers.mjs",
     "materialize:angular-22.0.4": "node ./tools/materialize-package-consumer.mjs angular-22.0.4-consumer",
     "verify:angular-22.0.4": "pnpm run materialize:angular-22.0.4 && node ./tools/verify-package-consumer.mjs angular-22.0.4-consumer",
+    "materialize:strict-consumer": "node ./tools/materialize-package-consumer.mjs strict-consumer",
+    "verify:strict-consumer": "pnpm run materialize:strict-consumer && node ./tools/verify-package-consumer.mjs strict-consumer",
     "materialize:lower-bounds": "node ./tools/materialize-package-consumer.mjs lower-bounds-consumer",
     "verify:lower-bounds": "pnpm run materialize:lower-bounds && node ./tools/verify-package-consumer.mjs lower-bounds-consumer",
     "verify:consumer-refresh": "node ./tools/verify-consumer-refresh.mjs",

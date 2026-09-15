@@ -18,7 +18,6 @@ import { configuration } from '#i18n';
 import { catalogLoaders } from '#i18n/catalog-loaders';
 import { catalogSet } from '#i18n/catalog-set';
 import { recoveryPayload } from '#i18n/recovery-payload';
-import { providerId, scopeId } from '#i18n/shell';
 
 import { atlasRuntimeExtensions } from './runtime-extensions';
 
@@ -37,8 +36,6 @@ import { atlasRuntimeExtensions } from './runtime-extensions';
  * choice, a stored value is not believed until it still canonicalizes to a supported locale, and a
  * store that fails never rolls back a locale change that already worked.
  */
-
-const shellScope = { providerId, scopeId } as const;
 
 function setup(
   stores: readonly LocalizationPersistenceStoreFactory[],

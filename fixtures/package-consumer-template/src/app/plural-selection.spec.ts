@@ -6,7 +6,7 @@ import { configuration } from '#i18n';
 import { catalogLoaders } from '#i18n/catalog-loaders';
 import { catalogSet } from '#i18n/catalog-set';
 import { recoveryPayload } from '#i18n/recovery-payload';
-import { messages, providerId, scopeId } from '#i18n/shell';
+import { messages } from '#i18n/shell';
 
 import { atlasRuntimeExtensions } from './runtime-extensions';
 
@@ -26,8 +26,6 @@ import { atlasRuntimeExtensions } from './runtime-extensions';
  *   many  11   (n % 100 in 11..99)
  *   other 100
  */
-
-const shellScope = { providerId, scopeId } as const;
 
 function context(): Localization {
   TestBed.configureTestingModule({

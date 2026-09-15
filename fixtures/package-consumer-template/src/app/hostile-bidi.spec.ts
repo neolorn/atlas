@@ -13,7 +13,7 @@ import { configuration } from '#i18n';
 import { catalogLoaders } from '#i18n/catalog-loaders';
 import { catalogSet } from '#i18n/catalog-set';
 import { recoveryPayload } from '#i18n/recovery-payload';
-import { messages, providerId, scopeId } from '#i18n/shell';
+import { messages } from '#i18n/shell';
 
 import { atlasRuntimeExtensions } from './runtime-extensions';
 
@@ -48,8 +48,6 @@ const FSI = '\u2068';
 const RLM = '\u200f';
 const ZWSP = '\u200b';
 const WJ = '\u2060';
-
-const shellScope = { providerId, scopeId } as const;
 
 @Component({
   selector: 'hostile-host',

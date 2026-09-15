@@ -267,6 +267,14 @@ const steps = Object.freeze([
     reads: ['dist:runtime', 'dist:toolkit', 'source:packages'],
     writes: ['consumer:lower-bounds'],
   },
+  // The row that varies the compiler rather than the versions. Analysis adopts a consumer's own
+  // options, so every other row exercises one setting of them, and this one reads the generated
+  // route table from application source, which is the shape none of the others performs.
+  {
+    id: 'verify:strict-consumer',
+    reads: ['dist:runtime', 'dist:toolkit', 'source:packages'],
+    writes: ['consumer:strict'],
+  },
   // Edits the materialized consumer in place and restores it, asserting the restore was exact. It
   // declares the write, so everything that reads that tree is ordered around it, which under the
   // list was true only because it happened to be written here.

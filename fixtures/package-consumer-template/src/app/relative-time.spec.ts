@@ -16,7 +16,6 @@ import { configuration } from '#i18n';
 import { catalogLoaders } from '#i18n/catalog-loaders';
 import { catalogSet } from '#i18n/catalog-set';
 import { recoveryPayload } from '#i18n/recovery-payload';
-import { providerId, scopeId } from '#i18n/shell';
 
 import { atlasRuntimeExtensions } from './runtime-extensions';
 
@@ -44,8 +43,6 @@ const at = (offsetMilliseconds: number) =>
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
-
-const shellScope = { providerId, scopeId } as const;
 
 function setup(policy?: RelativeTimePolicy): Localization {
   TestBed.resetTestingModule();
