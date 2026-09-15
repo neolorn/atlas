@@ -19,6 +19,25 @@ runtime.
 reactive forms the way any other control does. The profile states what kind of value the input
 holds: a decimal, a money amount in a currency, a percentage, a measurement, a date.
 
+It binds to `input` and to `textarea`. What kind of value a field holds does not depend on what it
+is written with, and a `select` is not among them because its value is chosen rather than typed.
+
+## Put it inside your own field component
+
+A design system's own field component sits between the form and this one, and forwards the form's
+write down to it:
+
+```text
+writeValue(value: LocalizedInputValue<Amount> | null): void {
+  this.field().writeValue(value);
+}
+```
+
+That write can arrive before the inner field has been given its profile, because the form writes to
+the outermost accessor during its own binding pass and the inner bindings are applied after. Atlas
+holds such a write and renders it when the profile lands, so there is no ordering for you to
+discover and nothing to buffer around.
+
 The control's value is the parsed value. What you read is `money(decimal('19.99'), 'USD')`, not
 `"١٩٫٩٩"`, and what your API receives is that value whichever script the visitor typed it in. Nothing
 is rounded on the way through.

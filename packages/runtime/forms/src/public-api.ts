@@ -20,6 +20,7 @@ import {
   inject,
   input,
   signal,
+  untracked,
 } from '@angular/core';
 import {
   NG_VALIDATORS,
@@ -79,9 +80,14 @@ export function localizedInputIssueCode(
  * Text the profile cannot read is not corrected and not thrown away. It stays in the field, the
  * element is marked invalid for a screen reader, and the reason is reported through `validate` and
  * through `result`. The value the form holds is the last one that parsed.
+ *
+ * Both text elements the form system binds a value accessor to, because what kind of value a field
+ * holds is independent of what it is written with: an amount is an amount in a one-line field and
+ * in a multi-line one. A `select` is not here, because its value is chosen rather than typed and
+ * there is nothing to parse.
  */
 @Directive({
-  selector: 'input[localizedInput]',
+  selector: 'input[localizedInput], textarea[localizedInput]',
   standalone: true,
   providers: [
     {
@@ -104,10 +110,18 @@ export function localizedInputIssueCode(
 })
 export class LocalizedInput implements ControlValueAccessor, Validator {
   private readonly element =
-    inject<ElementRef<HTMLInputElement>>(ElementRef).nativeElement;
+    inject<ElementRef<HTMLInputElement | HTMLTextAreaElement>>(ElementRef)
+      .nativeElement;
   private readonly renderer = inject(Renderer2);
   private readonly localization = inject(Localization);
   private model: LocalizedInputValue<LocalizedInputProfile> | null = null;
+  /**
+   * Counts the writes the form has made, so one can be rendered when the profile is there for it.
+   *
+   * A count rather than the value itself, because two writes of the same value are two writes and
+   * a signal holding the value would drop the second.
+   */
+  private readonly written = signal(0);
   private composing = false;
   private pendingRender = false;
   private change: (value: LocalizedInputValue<LocalizedInputProfile>) => void =
@@ -137,9 +151,20 @@ export class LocalizedInput implements ControlValueAccessor, Validator {
 
   constructor() {
     effect(() => {
+      // The profile is read here rather than only inside `renderModel`, which is what holds a write
+      // that arrived before the binding did. Section 8 of
+      // `specs/08-formatting-parsing-and-domain.spec.md` leaves the order of the two bindings with
+      // the framework: an application's own field component forwards the form's write during its
+      // own binding pass, and the inner field's inputs are set after that. Rendering from here
+      // happens once both are in place, so the write is honoured rather than failing on a required
+      // input that has no value yet.
       this.profile();
       this.localization.snapshot()?.id;
-      this.renderModel();
+      this.written();
+      // The render reads `result` and writes it, and neither is a reason to render again. Tracking
+      // them would rewrite the field from the model on the next keystroke, which is a reader's
+      // half-typed entry replaced by the last value that parsed.
+      untracked(() => this.renderModel());
     });
   }
 
@@ -149,11 +174,16 @@ export class LocalizedInput implements ControlValueAccessor, Validator {
    * Called by the form rather than by an application. A value the locale cannot express leaves the
    * field empty and reports why through `result`, because a number written in a spelling the
    * profile did not ask for would be read back as a different number.
+   *
+   * A write that arrives before this field has been given its profile is held and rendered when
+   * the profile lands, which is the ordering an application's own field component produces: the
+   * form writes to the outermost accessor during its own binding pass, and the inner field's
+   * inputs are set after that.
    */
   writeValue(value: LocalizedInputValue<LocalizedInputProfile> | null): void {
     this.model = value;
     this.result.set(undefined);
-    this.renderModel();
+    this.written.update((count) => count + 1);
   }
 
   /**
