@@ -3,7 +3,8 @@
 All notable changes to Atlas are recorded here, for `@neolorn/atlas` and `@neolorn/atlas-toolkit`,
 which share a version.
 
-Every version below 1.0.0 was an internal development milestone and was never published.
+The 0.x line and the betas were never published. `1.0.0-rc.2` was the first publish, under the
+`next` tag.
 
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The 0.x line is the alpha
@@ -11,65 +12,28 @@ stage, then the betas, then the release candidates that carry the changes breaki
 
 ## [1.2.0] - 2026-09-15
 
-Five fixes to what the toolkit generates and to how it reports findings about it. Nothing is added
-and nothing is removed.
-
 ### Fixed
 
-- The route table the analysis pass reads is a declaration rather than an empty table. Analysis
-  compiles the application against an overlay of the generated modules, and it is the pass that
-  discovers the routes, so the overlay cannot contain them. Emitted as an empty table closed with
-  `as const`, that overlay typed `routes` as `readonly []`, every field read on a member of one
-  resolved against `never`, and the errors were forwarded as ATL1401 against the application's own
-  lines. An application whose route table really is empty is a different case and still gets a
-  table.
-
-- The scope table the analysis pass reads no longer says which scopes the first render needs. A
-  scope is deferred when every use of its messages sits behind a lazy route boundary, which that
-  pass reads out of the application's source, so the overlay it starts from cannot know it. The
-  overlay stated `startup: true` for every scope, which is wrong for any application that has one
-  behind a boundary. `startup` is optional in the runtime contract and an absent field is read as a
-  startup scope, so the unknown case now leaves it absent, which is the same conservative answer
-  without the claim. The field stays part of the table's type there, so an application that reads
-  `startup` off the table it declared is not reported against while it is analysed.
-
-- A compilation whose analysis found nothing behind a lazy boundary records that it asked. The
-  deferred set was passed on only when it had something in it, so an application with no lazy
-  boundary produced the same table as a compilation that never analysed anything, which is the
-  distinction the field exists to carry.
-
+- The route table the analysis pass reads is a declaration rather than an empty table, so reading a
+  route's own field is no longer reported against the application.
+- The scope table the analysis pass reads states nothing about which scopes the first render needs,
+  and still carries `startup` for an application that reads it.
+- The generated scope table distinguishes a compilation whose analysis found nothing deferred from
+  one that never analyzed anything.
 - A generated scope module carries the message family runtime only where the scope declares a
-  family. The three functions and the type they carry were emitted into every scope module, so an
-  application compiling with `noUnusedLocals` was told its own build held unread declarations in a
-  file it did not write and must not edit.
-
-- A finding inside a generated module names the module it is in. The overlay's path was sliced one
-  character past the `#i18n/` prefix, so a finding in `#i18n/lazy` was reported against
-  `.atlas-virtual/azy.ts`, which is a file no build produces.
+  family, so `noUnusedLocals` no longer reports unread declarations in one that does not.
+- A finding inside a generated module names the module it is in.
 
 ## [1.1.0] - 2026-09-13
-
-A renderer can state the status of its own response. This closes the gap 1.0.1 recorded: serving
-maintenance, or reporting a render that failed, is an application's answer about its own condition,
-and it was unreachable through `createLocaleRequestHandler`, because every rendered response took
-the status Atlas resolved for the address. Nothing that worked before behaves differently.
 
 ### Added
 
 - `declareOperationalFailure` in `@neolorn/atlas/http`, with `DeclaredOperationalFailure` and
-  `LocalizedRenderResult`. A renderer may now return a `Response` as it always could, or a
-  declaration wrapping one. The wrapper is what makes the status a statement, so an accidental 500
-  and a deliberate 503 are never the same signal, and a renderer written against 1.0 is unaffected.
-
-  A declared status travels at an address Atlas serves. At an address Atlas answered from its own
-  status table, a 404 or a 410, that classification stands and the declaration is reported once in
-  development, naming the address and both statuses. An application declaring maintenance does not
-  know which addresses Atlas refused, so the rule that leaves those alone is the one it can write
-  against.
-
-  A response carrying a declaration is classified private and not stored whatever the address is
-  normally classified as, so a shared cache does not hold a maintenance page under the page's own
-  key and go on serving it after the deployment recovers.
+  `LocalizedRenderResult`. A renderer returns a `Response` as it always could, or a declaration
+  wrapping one.
+- A declared status travels at an address Atlas serves. At an address Atlas answered from its own
+  status table that classification stands, and the declaration is reported once in development.
+- A response carrying a declaration is classified private and not stored.
 
 ### Changed
 
@@ -79,44 +43,22 @@ the status Atlas resolved for the address. Nothing that worked before behaves di
 
 ## [1.0.1] - 2026-09-13
 
-Two fixes to the request handler in `@neolorn/atlas/http`, both found from a consumer's side, and
-the specification correction that goes with them. Nothing is added and nothing is removed; a
-deployment that serves requests through `createLocaleRequestHandler` should take this release.
-
 ### Fixed
 
-- A structurally unsafe request target reaches the classifier as it arrived. `toWebRequest` built a
-  Fetch `Request`, and constructing one parses its URL, which resolves dot segments and rewrites a
-  backslash. `/en/%2e%2e/%2e%2e/etc/passwd` therefore reached the handler as `/etc/passwd`: the
-  address the traversal was aiming at, repaired, with nothing left to refuse. The 400 that section
-  5 of the routing specification requires was unreachable for any deployment using the adapter, and
-  `/en/./about` was served as a page. The target is now carried from the adapter to the classifier
-  as it arrived, and is classified before dispatch, so an unsafe address under a locale-neutral
-  root is refused rather than handed to whatever serves files.
-
-- A malformed target no longer reaches a renderer. The handler asked the application to render
-  every outcome that was not a redirect, and a refused target is not a redirect, so an application
-  was asked to draw a page for an address Atlas had already refused, with a resolution carrying a
-  diagnostic rather than a route. The status was correct either way; what was wrong is that the
-  renderer ran at all. `RenderableResolution` no longer includes the malformed outcome, which is
-  what the entry point's documentation already said.
+- A structurally unsafe request target reaches the classifier as it arrived, so
+  `/en/%2e%2e/%2e%2e/etc/passwd` is refused rather than served as `/etc/passwd`.
+- A malformed target no longer reaches a renderer. `RenderableResolution` no longer includes that
+  outcome.
 
 ### Changed
 
-- `specs/07-routing-rendering-and-seo.spec.md` sections 4 and 5. Section 4 states that where an
-  Atlas release is itself the request boundary the rejection is the release's own, and that a
-  parsed URL is not the target that arrived. Section 5 states that a refused target never reaches
-  the renderer, and resolves a contradiction it carried: the fixed status table governs routing
-  outcomes, while an operational failure is the consumer application's own and the status that
-  reports one is the consumer application's to declare. No release supplies a way to declare one
-  yet, which is now recorded as the gap it is rather than left implied.
+- `specs/07-routing-rendering-and-seo.spec.md` sections 4 and 5 state that a parsed URL is not the
+  target that arrived, that a refused target never reaches the renderer, and that the status
+  reporting an operational failure is the consumer application's to declare.
 
 ## [1.0.0] - 2026-09-12
 
-The first public release. `@neolorn/atlas` and `@neolorn/atlas-toolkit` are published to npm under
-the MIT license, at the surface the release candidates settled: template selectors without the
-product prefix, a formatting pipe for each canonical value kind, the four project verbs on the
-programmatic surface, and only what a call reaches exported. The public API is stable from here.
+The first stable release, at the surface 1.0.0-rc.2 settled.
 
 ## [1.0.0-rc.2]
 

@@ -19,6 +19,8 @@ so.
 
 ## Supported versions
 
+The contract on this page starts at 1.0.0. Nothing published before it is covered by it.
+
 The `1.x` line is supported, and fixes are released on the current minor version. The same holds for
 security fixes, which is what [SECURITY.md](../SECURITY.md) states.
 

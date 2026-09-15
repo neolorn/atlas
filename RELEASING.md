@@ -49,7 +49,7 @@ The commands below are written for version `0.0.0`, which this project cannot pr
 
    For a prerelease, add `--tag next`. The registry is set by `publishConfig` in each manifest. Publish both packages in the same session.
 
-7. **Create the GitHub release** from the tag, with the changelog section as its body.
+7. **Create the GitHub release** from the tag. The body is that version's change list drafted from its changelog section, one line per change, then the install commands for both packages, then the links a reader follows from the release. It opens with the list and carries no summary sentence above it.
 
 8. **Verify the publication.** From a clean directory, install both packages at the new version and confirm they resolve.
 
