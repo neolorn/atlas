@@ -2974,6 +2974,24 @@ export type LocalizedServerRoutes<Mode> = (Mode extends unknown
   : never)[];
 
 /**
+ * The parameter values a route is rendered ahead of time for.
+ *
+ * A set written where the table is, or a function the build calls for one. The function is there
+ * because a set that has to be read from a file or an API cannot be written in place, and a
+ * declaration that took only written values would limit prerendering to sets small enough to type
+ * out. Both are serialized per locale the same way, so the caller never sees a half-expanded
+ * address it would have to recover the locale from.
+ *
+ * A function is asked once per route, not once per address: the answer is the same list whichever
+ * locale is being spelled.
+ */
+export type PrerenderParameterValues =
+  | readonly Readonly<Record<string, unknown>>[]
+  | (() =>
+      | readonly Readonly<Record<string, unknown>>[]
+      | Promise<readonly Readonly<Record<string, unknown>>[]>);
+
+/**
  * One route a build should render, named once and expanded into every locale's spelling.
  *
  * Written against the route's identity rather than its path, so adding a locale adds addresses
@@ -3000,8 +3018,12 @@ export interface LocalizedServerRouteDeclaration<Mode, Projection = unknown> {
    * `/en-us/articles/atlas-handbook` is prerendered as `/ar-eg/articles/دليل-أطلس` from the same
    * entry. Writing the localized spellings by hand is the part nobody gets right, and getting it
    * wrong produces a page that exists in one language and 404s in the other.
+   *
+   * A function is called by the build, which is where a set read from a file or an API belongs.
+   * `projectSitemap` takes values written in place, so a set that is fetched is resolved once and
+   * given to both.
    */
-  readonly prerender?: readonly Readonly<Record<string, unknown>>[];
+  readonly prerender?: PrerenderParameterValues;
 }
 
 /** What to do about the addresses the declarations did not name. */
@@ -3099,6 +3121,7 @@ export function localizedServerRoutes<
         `Route ${route.id} takes no parameters, so \`prerender\` values have nothing to fill.`,
       );
     }
+    const declaredValues = prerenderValues(declaration.prerender);
     for (const [localeValue, prefix] of prefixes) {
       const locale = canonicalLocale(localeValue);
       const presentation = presentationPath(projection, route, locale);
@@ -3123,17 +3146,16 @@ export function localizedServerRoutes<
         Object.freeze({
           path,
           renderMode: declaration.renderMode,
-          ...(declaration.prerender === undefined
+          ...(declaredValues === undefined
             ? {}
             : {
+                // The declared values are asked for before anything is awaited, so a function that
+                // reads the build's injector still runs inside the context this is called in:
+                // `@angular/ssr` 22.1.7 awaits it inside `runInInjectionContext`
+                // (`ssr.mjs:661`), and an injection context does not survive an await.
                 getPrerenderParams: () =>
-                  Promise.resolve(
-                    prerenderParameters(
-                      projection,
-                      route,
-                      locale,
-                      declaration.prerender ?? [],
-                    ),
+                  declaredValues().then((values) =>
+                    prerenderParameters(projection, route, locale, values),
                   ),
               }),
         }),
@@ -3196,6 +3218,22 @@ export function localizedServerRoutes<
   // built every element, replaces one `as ServerRoute[]` per consumer: each of those sitting
   // above a whole table of entries it silenced along the way.
   return routes as LocalizedServerRoutes<Mode>;
+}
+
+/**
+ * One way to ask for the declared values, whichever way they were declared.
+ *
+ * A function is asked once and its answer shared, because the addresses a declaration expands into
+ * are one route's and the values are the same list for all of them. Asking per locale would read a
+ * file or call an API once per language for one list.
+ */
+function prerenderValues(
+  declared: PrerenderParameterValues | undefined,
+): (() => Promise<readonly Readonly<Record<string, unknown>>[]>) | undefined {
+  if (declared === undefined) return undefined;
+  if (typeof declared !== 'function') return () => Promise.resolve(declared);
+  let asked: Promise<readonly Readonly<Record<string, unknown>>[]> | undefined;
+  return () => (asked ??= Promise.resolve(declared()));
 }
 
 function prerenderParameters(

@@ -94,6 +94,7 @@ export {
   type LocalizedRouteResolution,
   type LocalizedServerRoute,
   type LocalizedServerRouteDeclaration,
+  type PrerenderParameterValues,
   type LocalizedServerRoutes,
   type LocalizedServerRoutesOptions,
   type PathPrefixLocalePolicy,

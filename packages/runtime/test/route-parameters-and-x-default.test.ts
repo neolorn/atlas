@@ -6,6 +6,7 @@ import {
   createPathPrefixLocalePolicy,
   defineRouteProjection,
   localizedServerRoutes,
+  type PrerenderParameterValues,
   LocalizationError,
   type GeneratedConfiguration,
   type RouteParameterCodec,
@@ -224,7 +225,7 @@ describe('the parameter values a localized server route is prerendered with', ()
     locales: { 'en-US': 'en-us', 'ar-EG': 'ar-eg' },
   });
 
-  const schedule = (prerender: readonly Readonly<Record<string, unknown>>[]) =>
+  const schedule = (prerender: PrerenderParameterValues) =>
     localizedServerRoutes(
       POLICY,
       PROJECTION,
@@ -235,7 +236,7 @@ describe('the parameter values a localized server route is prerendered with', ()
 
   const paramsFor = async (
     path: string,
-    prerender = [{ slug: 'atlas-handbook' }],
+    prerender: PrerenderParameterValues = [{ slug: 'atlas-handbook' }],
   ) => {
     const entry = schedule(prerender).find((route) => route.path === path);
     expect(entry, path).toBeDefined();
@@ -272,21 +273,21 @@ describe('the parameter values a localized server route is prerendered with', ()
     ]);
   });
 
-  it('refuses a value with no spelling in the locale being built', () => {
+  it('refuses a value with no spelling in the locale being built', async () => {
     // Silently dropping it is the defect worth naming: the page exists in English and 404s in
     // Arabic, and nothing in the build says so. The refusal is a `route-unavailable`, not a
     // configuration error, because the configuration is fine: this value is not.
     //
-    // Caught rather than awaited, and that is a fact about the hook: `getPrerenderParams` is
-    // declared to return a promise and refuses *synchronously*, because the values are serialized
-    // before `Promise.resolve` is reached. A test written as `rejects` passes here by never
-    // running its assertion.
+    // The refusal reaches the caller as a rejected promise rather than a synchronous throw, and
+    // the asserted value is the diagnostic rather than the timing: a declared set and a function
+    // the build calls are serialized the same way, and a function cannot answer before it is
+    // awaited.
     const entry = schedule([{ slug: 'no-such-entity' }]).find(
       (route) => route.path === 'en-us/articles/:slug',
     ) as { getPrerenderParams: () => Promise<unknown> };
     let thrown: unknown;
     try {
-      void entry.getPrerenderParams();
+      await entry.getPrerenderParams();
     } catch (error) {
       thrown = error;
     }
@@ -297,6 +298,47 @@ describe('the parameter values a localized server route is prerendered with', ()
       targetLocale: 'en-US',
     });
     expect((thrown as LocalizationError).diagnostic.message).toContain('slug');
+  });
+
+  it('takes the same values from a function the build calls', async () => {
+    // A set that has to be read from a file or an API cannot be written where the table is, and
+    // the addresses it produces have to be the same ones a written set produces: the expansion is
+    // per locale and only the release knows which locale each emitted address belongs to.
+    expect(
+      await paramsFor('ar-eg/articles/:slug', () => [
+        { slug: 'atlas-handbook' },
+      ]),
+    ).toEqual([{ slug: 'دليل' }]);
+  });
+
+  it('waits for a function that answers later', async () => {
+    expect(
+      await paramsFor('en-us/articles/:slug', async () => {
+        await Promise.resolve();
+        return [{ slug: 'atlas-handbook' }];
+      }),
+    ).toEqual([{ slug: 'atlas-handbook' }]);
+  });
+
+  it('asks a function once, however many addresses the route expands into', async () => {
+    // Two locales, one list. A function that reads a file or calls an API would otherwise run once
+    // per language for a set that does not vary by language.
+    let asked = 0;
+    const routes = schedule(() => {
+      asked += 1;
+      return [{ slug: 'atlas-handbook' }];
+    });
+    const params = (path: string) =>
+      (
+        routes.find((route) => route.path === path) as {
+          getPrerenderParams: () => Promise<unknown>;
+        }
+      ).getPrerenderParams();
+
+    await params('en-us/articles/:slug');
+    await params('ar-eg/articles/:slug');
+
+    expect(asked).toBe(1);
   });
 
   it('does not schedule prerendering for a route that declares no values', () => {
