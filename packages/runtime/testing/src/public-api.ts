@@ -1,15 +1,27 @@
-// Six exports, and the reason the last of them is about the environment rather than the runtime.
+// Seven exports, and the reason two of them are about the environment rather than the runtime.
 //
 // `specs/06-runtime-and-angular.spec.md` section 12 fixes this surface: the testing providers, an
 // in-memory loader factory, a controllable participant, a controller over deferred loads and
-// participant attempts, a rendered-text helper, and an environment reset. Nothing here reaches
-// the network or shares state between specs.
+// participant attempts, a rendered-text helper, an environment reset, and a server seat. Nothing
+// here reaches the network or shares state between specs.
 //
 // The reset is here because an Angular test host reuses one DOM across spec files, so every file
 // in a worker sees the same address bar, cookie jar and web storage, and Atlas reads the locale
 // from the address when routing is installed and from a store when persistence is. Every consumer
 // inherits both halves together, so the reset that puts that state back is published rather than
 // described.
+
+export {
+  answeredHead,
+  createLocalizedServerSeat,
+  type AnsweredAddress,
+  type AnsweredHead,
+  type AnsweredLink,
+  type AnsweredPageOutcome,
+  type AnsweredRequestInit,
+  type LocalizedServerSeat,
+  type LocalizedServerSeatOptions,
+} from './server-seat.js';
 
 import {
   makeEnvironmentProviders,

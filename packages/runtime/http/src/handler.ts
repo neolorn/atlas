@@ -208,6 +208,30 @@ export type LocaleRenderer = (
 ) => LocalizedRenderResult | Promise<LocalizedRenderResult>;
 
 /**
+ * What the handler decided for one request, for the seat that answers through it.
+ *
+ * Internal. Section 12 of `specs/06-runtime-and-angular.spec.md` requires the server seat in
+ * `@neolorn/atlas/testing` to answer through this handler rather than through a second
+ * implementation of its rules, and two of the things a test needs to know are not in the response:
+ * whether a 404 came from the table or from a page declaring an absence, and whether a declaration
+ * was carried at all. The handler reports what it decided instead of the seat deriving it again.
+ */
+export interface ɵAnsweredRequest {
+  /** The request the handler answered, which is the key the declaration channel is held under. */
+  readonly request: Request;
+  /** What the address resolved to, including the outcomes that never reach a renderer. */
+  readonly resolution: RouteResolution;
+  /** The locale the renderer was told to draw in, absent where no renderer was called. */
+  readonly locale: string | undefined;
+  /** What the page or the renderer stated, absent where neither did. */
+  readonly declared: PageOutcomeDeclaration | undefined;
+  /** Whether that declaration decided the response, which section 5's narrow rule settles. */
+  readonly carried: boolean;
+  /** Whether Atlas declined the address, which sends it to `passthrough` rather than to a route. */
+  readonly declined: boolean;
+}
+
+/**
  * What a locale request handler needs to answer a request.
  *
  * The first four are required because a wrong default in any of them is a wrong response rather
@@ -253,6 +277,13 @@ export interface LocaleRequestHandlerOptions {
    * business, but a real deployment hands them to whatever serves files.
    */
   readonly passthrough?: (request: Request) => Response | Promise<Response>;
+  /**
+   * Internal. Called once per request with what the handler decided, for the testing server seat.
+   *
+   * Not a hook for a deployment to write against: it reports rather than decides, it is called
+   * after the answer is settled, and what it carries is the handler's own working.
+   */
+  readonly ɵobserve?: (answered: ɵAnsweredRequest) => void;
 }
 
 /**
@@ -334,6 +365,14 @@ export function createLocaleRequestHandler(
       // `/main-A1B2C3.js` would be worse than answering nothing. The consumer's own handling is
       // what should serve it, so `passthrough` is where it goes and a 404 is what happens when
       // there is none.
+      options.ɵobserve?.({
+        request,
+        resolution,
+        locale: undefined,
+        declared: undefined,
+        carried: false,
+        declined: true,
+      });
       return (
         options.passthrough?.(request) ?? new Response(null, { status: 404 })
       );
@@ -381,6 +420,14 @@ export function createLocaleRequestHandler(
     };
 
     if (!hasBody(resolution) || options.render === undefined) {
+      options.ɵobserve?.({
+        request,
+        resolution,
+        locale: settled,
+        declared: undefined,
+        carried: false,
+        declined: false,
+      });
       return new Response(null, {
         status: descriptor.status,
         headers: atlasHeaders(descriptor),
@@ -430,6 +477,15 @@ export function createLocaleRequestHandler(
       carriesDeclaration && declared !== undefined
         ? pageOutcomeHttpDescriptor(declared, descriptor)
         : descriptor;
+
+    options.ɵobserve?.({
+      request,
+      resolution,
+      locale: settled ?? policy.defaultLocale,
+      declared,
+      carried: carriesDeclaration,
+      declined: false,
+    });
 
     const merged = new Headers(rendered.headers);
     for (const [name, value] of atlasHeaders(effective)) {

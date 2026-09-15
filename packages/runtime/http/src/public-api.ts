@@ -31,6 +31,7 @@ export {
   type LocalizedRenderResult,
   type RenderableResolution,
   type LocaleRenderer,
+  type ɵAnsweredRequest,
 } from './handler';
 
 export {
