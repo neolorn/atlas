@@ -158,6 +158,77 @@ naming both. You are declaring something about your application, and your applic
 know which addresses the handler refused; the rule that leaves those alone is the one you can write
 against.
 
+## Answer for a record that is not there
+
+An address resolves before anything loads the record it names, so `/en-us/articles/anything` is a
+route the handler serves and a page your application may not have. `declarePageOutcome` states which:
+`pageAbsent()` for a record that does not exist, `pageGone()` for one taken down for good. Those two
+carry the fact rather than a status, because the status for each is already fixed and restating it
+would be writing out a rule the handler applies anyway.
+
+```ts src/app/missing-record.spec.ts
+import { describe, expect, it } from 'vitest';
+
+import {
+  createLocaleRequestHandler,
+  declarePageOutcome,
+} from '@neolorn/atlas/http';
+import { pageAbsent, pageGone } from '@neolorn/atlas/core';
+import { localizationSetup } from '#i18n';
+
+import { appRouteProjection, routePolicy } from './localization.routes';
+
+type RecordState = 'published' | 'missing' | 'retired';
+
+const handlerFor = (state: RecordState) =>
+  createLocaleRequestHandler({
+    policy: routePolicy,
+    projection: appRouteProjection,
+    configuration: localizationSetup.configuration,
+    cache: { successMaxAge: 300, permanentRedirectMaxAge: 86_400 },
+    cookie: false,
+    render: ({ locale }) => {
+      if (state === 'missing') return declarePageOutcome(pageAbsent());
+      if (state === 'retired') return declarePageOutcome(pageGone());
+      return new Response(`<!doctype html><html lang="${locale}"></html>`, {
+        headers: { 'content-type': 'text/html' },
+      });
+    },
+  });
+
+const statusAt = async (state: RecordState, path: string): Promise<number> =>
+  (await handlerFor(state)(new Request(`https://example.com${path}`))).status;
+
+describe('one address, and a record in three states', () => {
+  it('answers the address the record is published at', async () => {
+    expect(await statusAt('published', '/en-us/second')).toBe(200);
+  });
+
+  it('answers a missing record at the address it was asked for', async () => {
+    expect(await statusAt('missing', '/en-us/second')).toBe(404);
+  });
+
+  it('tells a crawler to drop an address that is gone for good', async () => {
+    expect(await statusAt('retired', '/en-us/second')).toBe(410);
+  });
+
+  it('leaves an address the handler never served alone', async () => {
+    expect(await statusAt('retired', '/en-us/no-such-page')).toBe(404);
+  });
+});
+```
+
+A page can state the same three from inside an Angular render, through `LocalizedPageOutcome` in
+`@neolorn/atlas/router`, which is
+[How to tell crawlers your pages are translations](control-indexing.md). The declaration reaches the
+handler over the request the two already share, so nothing is carried in a header a client could
+write or a response could expose.
+
+Rendering a route ahead of time is different. A prerendered page has no response to carry a
+declaration to, and a file written from a render that declared an absence is served afterwards as a
+successful page, so declaring one during a build fails the build instead. Render that route on
+demand.
+
 A response carrying a declaration is private and not stored, whatever the address is normally
 classified as, so a content network does not hold your maintenance page under the page's own key
 and keep serving it after you recover.

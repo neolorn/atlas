@@ -21,7 +21,9 @@
 export {
   createLocaleRequestHandler,
   declareOperationalFailure,
+  declarePageOutcome,
   type DeclaredOperationalFailure,
+  type DeclaredPageOutcome,
   type LocaleCookiePolicy,
   type LocaleRequestHandler,
   type LocaleRequestHandlerOptions,

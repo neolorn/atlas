@@ -1,8 +1,16 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import type { Routes } from '@angular/router';
-import { injectLocalization } from '@neolorn/atlas';
-import { LocalizedRouteParameters } from '@neolorn/atlas/router';
+import {
+  injectLocalization,
+  pageAbsent,
+  pageGone,
+  pageOperationalFailure,
+} from '@neolorn/atlas';
+import {
+  LocalizedPageOutcome,
+  LocalizedRouteParameters,
+} from '@neolorn/atlas/router';
 import { messages } from '#i18n/shell';
 
 import { DossierStore } from './dossier-store';
@@ -113,6 +121,7 @@ class FeatureLabArticleRoute {
 class FeatureLabTopicRoute {
   private readonly localization = injectLocalization();
   private readonly route = inject(ActivatedRoute);
+  private readonly outcome = inject(LocalizedPageOutcome);
   protected readonly label = this.localization.textSignal(messages.route.item);
   protected readonly homeLink = this.localization.textSignal(
     messages.route.returnHome,
@@ -120,7 +129,31 @@ class FeatureLabTopicRoute {
   protected readonly topicId = computed(
     () => this.route.snapshot.paramMap.get('topic') ?? '',
   );
+
+  /**
+   * What the address could not say, said by the page that looked it up.
+   *
+   * `topics/:topic` accepts any identifier, so every spelling of it resolves to this route and the
+   * status Atlas can derive from the address alone is 200. Whether a topic is filed under the
+   * identifier, whether it was retired, and whether the lookup itself failed are three answers only
+   * this component has. The declaration lands after a microtask, which is where a real lookup lands
+   * it, so the head Atlas built for this navigation is corrected rather than built twice.
+   */
+  constructor() {
+    const topic = this.route.snapshot.paramMap.get('topic') ?? '';
+    void Promise.resolve().then(() => {
+      if (topic === 'retired-topic') this.outcome.declare(pageGone());
+      else if (topic === 'unavailable-topic') {
+        this.outcome.declare(pageOperationalFailure(503));
+      } else if (!FILED_TOPICS.includes(topic)) {
+        this.outcome.declare(pageAbsent());
+      }
+    });
+  }
 }
+
+/** The topics this application has, which is the fact the address cannot carry. */
+const FILED_TOPICS: readonly string[] = ['atlas-handbook', 'a.b_c~d-e'];
 
 /**
  * A route that tells Atlas how its address is spelled elsewhere.

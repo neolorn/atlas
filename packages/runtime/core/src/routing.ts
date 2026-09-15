@@ -30,7 +30,7 @@ export type RouteIndexingClass = 'indexable' | 'non-indexable' | 'private';
  * A project that already classifies its routes points Atlas at the field it already has. A
  * project that does not gets this.
  *
- * `specs/07-routing-rendering-and-seo.spec.md` section 13 is why this is a field name and a table
+ * `specs/07-routing-rendering-and-seo.spec.md` section 14 is why this is a field name and a table
  * of literals rather than a predicate: the declaration is read from the provider file's source
  * text when the owner is compiled, and Atlas does not execute consumer code to find out how an
  * application classifies its own routes.
@@ -759,7 +759,7 @@ export interface RouteCacheHeaders {
  * `descriptor.cache` remains exported for a consumer who wants the classification and nothing else,
  * and this sets no header: writing it onto a response is the host's, as is deciding not to.
  *
- * `specs/07-routing-rendering-and-seo.spec.md` section 15 draws that line and requires the result
+ * `specs/07-routing-rendering-and-seo.spec.md` section 16 draws that line and requires the result
  * to be a set of headers by name rather than one header's text, so a consumer writes the set with
  * one loop and gains a header a later release adds without changing a line.
  */

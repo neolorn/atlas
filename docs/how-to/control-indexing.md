@@ -55,6 +55,65 @@ table of literals rather than a predicate.
 The indexing field is read by both the page metadata and the sitemap, so a route is classified in one
 place.
 
+## Withdraw a page that turned out not to be there
+
+An address resolves before anything loads the record it names. Whether the article exists, whether it
+was taken down for good, and whether the load itself failed are three answers only the page has, so
+the page states them. Inject `LocalizedPageOutcome` and declare one of `pageAbsent()`, `pageGone()`
+or `pageOperationalFailure(status)`:
+
+```text
+export class ArticleRoute {
+  private readonly outcome = inject(LocalizedPageOutcome);
+
+  constructor() {
+    void this.articles.load(this.slug).then((article) => {
+      if (article === undefined) this.outcome.declare(pageAbsent());
+    });
+  }
+}
+```
+
+Declaring after the page is on screen is the ordinary case, because the load finishes after
+activation. Atlas rebuilds the head when the declaration arrives.
+
+What it withdraws is what the address implied. A page declared absent or removed publishes no
+canonical link and no `hreflang` alternates, and carries `noindex`: an alternate link states that the
+same page exists in another language, so leaving one on a page that is not there makes that claim in
+every language at once. A declared operational failure withdraws none of it. It says this render did
+not produce the page, which is about one response rather than about the address.
+
+On a server the declaration also reaches the response, which is
+[How to negotiate a locale on your own server](negotiate-on-your-own-server.md). In the browser there
+is no response to reach and Atlas invents none.
+
+What the page is called while it is missing is yours. Read `context.pageOutcome` in the `document`
+callback and return the wording for it.
+
+## Name the pages that reach no route
+
+Three answers a visitor can get have no route to look a title up by: an address you do not serve, one
+whose entity your route table declares permanently removed, and one naming a locale you do not
+support. Declare a document for each, keyed by what happened:
+
+```text
+provideLocalizedRouter(routes, {
+  outcomeDocuments: {
+    'not-found': {
+      title: messages.document.notFound.title,
+      description: messages.document.notFound.description,
+    },
+    gone: { title: messages.document.gone.title },
+    'unsupported-locale': { title: messages.document.unsupportedLocale.title },
+  },
+}),
+```
+
+Without them the head of a missing page is whatever the previous page left in it, title and
+description and canonical link together, which tells a reader and a crawler they are somewhere they
+are not. They are message handles like every other title, so a missing translation is reported by
+`atlas check --require-complete` rather than serving one language's wording under another's.
+
 ## Set cache headers per route
 
 `routeCacheHeaders` takes the classification Atlas derived for a resolved route and the freshness

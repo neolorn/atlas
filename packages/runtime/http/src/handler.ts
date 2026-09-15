@@ -2,7 +2,7 @@
 // `specs/07-routing-rendering-and-seo.spec.md` section 5. A handler that only set headers could
 // not answer a redirect, an unsupported locale or a malformed target, and those are the outcomes
 // that must never reach a renderer; a handler that produced the body would have to know what a
-// page looks like. So the status is Atlas's, the body is the renderer's, and section 14 of
+// page looks like. So the status is Atlas's, the body is the renderer's, and section 15 of
 // `specs/07-routing-rendering-and-seo.spec.md` is what keeps a 404 in the requested locale at
 // the requested address rather than redirecting it somewhere that renders.
 
@@ -14,14 +14,19 @@
 // layering the right way up: the base does not depend on the integration.
 import {
   builtLocalePolicy,
+  pageOutcomeHttpDescriptor,
   resolveLocalizedRoute,
   routeCacheHeaders,
   routeHttpDescriptor,
+  ɵopenPageOutcomeChannel,
+  ɵtakePageOutcome,
+  type DeclaredPageOutcomeDescriptor,
   type GeneratedConfiguration,
   type LocalePreferenceSource,
   type LocaleUrlPolicy,
+  type PageOutcomeDeclaration,
+  type PageOutcomeOperationalFailure,
   type RouteCacheDurations,
-  type RouteHttpDescriptor,
   type RouteResolution,
   type RouteRuntimeProjection,
 } from '@neolorn/atlas/core';
@@ -92,20 +97,68 @@ export interface LocaleRequestOutcome {
 }
 
 /**
- * A response whose status the application is stating for itself.
+ * A renderer's answer that states the outcome as well as producing the document.
  *
  * Section 5 of `specs/07-routing-rendering-and-seo.spec.md` keeps three outcome classes apart, and
- * an operational failure is not a routing outcome: serving maintenance, or reporting a render that
- * failed, is the application's own answer about its own condition at an address that resolved
- * perfectly well. Atlas has nothing to say about it and no way to detect it, so it is declared.
+ * two of them depend on facts an address cannot supply: whether the entity is absent, whether it
+ * was permanently removed, and whether the render failed. A renderer states any of the three here,
+ * and a page states the same three from inside the render through `LocalizedPageOutcome` in
+ * `@neolorn/atlas/router`. One type carries both, because they differ only in where the
+ * declaration is made.
  *
  * *The wrapper is the declaration.* A renderer's plain `Response` also carries a status, and
  * reading that as a statement would make an accidental 500 and a deliberate one the same signal,
  * which section 5 forbids for exactly that reason. Wrapping is the act that separates them.
  */
-export interface DeclaredOperationalFailure {
+export interface DeclaredPageOutcome {
+  /** What is being stated about this render: an absence, a removal, or a failure. */
+  readonly pageOutcome: PageOutcomeDeclaration;
+  /**
+   * The document to send with it, when the renderer produced one.
+   *
+   * Omitted for a declaration with nothing to draw, which answers the status and the headers and
+   * no body.
+   */
+  readonly response?: Response;
+}
+
+/**
+ * A response whose status the application is stating for itself.
+ *
+ * The operational arm of `DeclaredPageOutcome`, kept as its own type and its own function because
+ * it is what a renderer declaring maintenance or a failed load already writes. The response's own
+ * status is the one declared.
+ */
+export interface DeclaredOperationalFailure extends DeclaredPageOutcome {
   /** The response to send, whose own status is the one being declared. */
   readonly operationalFailure: Response;
+  /** Narrowed: this arm always states a failure rather than an absence or a removal. */
+  readonly pageOutcome: PageOutcomeOperationalFailure;
+  /** Always present here, and the same object as `operationalFailure`. */
+  readonly response: Response;
+}
+
+/**
+ * States an outcome the address could not have supplied, with or without a document for it.
+ *
+ * ```ts
+ * render: async (outcome) => {
+ *   const article = await articles.load(outcome.resolution.parameters['slug']);
+ *   if (article === undefined) return declarePageOutcome(pageAbsent(), notFoundDocument());
+ *   return render(article);
+ * };
+ * ```
+ *
+ * The declaration is honoured at an address Atlas serves. At one it refuses, the refusal stands and
+ * the declaration is reported where a developer will see it.
+ */
+export function declarePageOutcome(
+  pageOutcome: PageOutcomeDeclaration,
+  response?: Response,
+): DeclaredPageOutcome {
+  return Object.freeze(
+    response === undefined ? { pageOutcome } : { pageOutcome, response },
+  );
 }
 
 /**
@@ -128,18 +181,26 @@ export interface DeclaredOperationalFailure {
 export function declareOperationalFailure(
   response: Response,
 ): DeclaredOperationalFailure {
-  return Object.freeze({ operationalFailure: response });
+  return Object.freeze({
+    operationalFailure: response,
+    response,
+    pageOutcome: Object.freeze({
+      outcome: 'operational-failure',
+      // Read off the response rather than taken as a second argument, because the response already
+      // carries the status being declared and a second place to state it is a second answer.
+      status: response.status,
+    }),
+  });
 }
 
 /**
- * What a renderer may return: the document, or the document with a status declared for it.
+ * What a renderer may return: the document, or the document with an outcome declared for it.
  *
  * A union rather than a replacement for `Response`. A renderer that returns one keeps working
- * exactly as it did, which is what allows the second arm to arrive in a minor release, and it is
- * also the honest shape: declaring an operational failure is the uncommon case and it should look
- * like one at the call site.
+ * exactly as it did, and it is also the honest shape: declaring an outcome is the uncommon case
+ * and it should look like one at the call site.
  */
-export type LocalizedRenderResult = Response | DeclaredOperationalFailure;
+export type LocalizedRenderResult = Response | DeclaredPageOutcome;
 
 /** Produces the document. Called only for outcomes that have a body. */
 export type LocaleRenderer = (
@@ -280,27 +341,29 @@ export function createLocaleRequestHandler(
     const descriptor = routeHttpDescriptor(resolution);
     const settled = settledLocale(resolution);
 
-    // Taken as an argument rather than read from the descriptor, because a declared operational
-    // failure changes what a cache may do with the response and changes nothing else about it,
-    // and that is known only after the renderer has answered.
-    const atlasHeaders = (cache: RouteHttpDescriptor['cache']): Headers => {
+    // Taken as an argument rather than read from the outer descriptor, because a declared outcome
+    // changes the status, the caching and the indexing of the response and nothing else about it,
+    // and which of those apply is known only after the renderer has answered.
+    const atlasHeaders = (
+      effective: DeclaredPageOutcomeDescriptor,
+    ): Headers => {
       const headers = new Headers();
       for (const [name, value] of Object.entries(
         routeCacheHeaders(
-          { ...descriptor, cache },
+          { ...descriptor, cache: effective.cache },
           { ...options.cache, localePreference },
         ),
       )) {
         headers.set(name, value);
       }
-      if (descriptor.contentLanguage !== undefined) {
-        headers.set('content-language', descriptor.contentLanguage);
+      if (effective.contentLanguage !== undefined) {
+        headers.set('content-language', effective.contentLanguage);
       }
-      if (descriptor.robots !== undefined) {
-        headers.set('x-robots-tag', descriptor.robots);
+      if (effective.robots !== undefined) {
+        headers.set('x-robots-tag', effective.robots);
       }
-      if (descriptor.location !== undefined) {
-        headers.set('location', descriptor.location);
+      if (effective.location !== undefined) {
+        headers.set('location', effective.location);
       }
       // Only when there is something new to remember, and only when a person asked for it.
       if (
@@ -320,50 +383,61 @@ export function createLocaleRequestHandler(
     if (!hasBody(resolution) || options.render === undefined) {
       return new Response(null, {
         status: descriptor.status,
-        headers: atlasHeaders(descriptor.cache),
+        headers: atlasHeaders(descriptor),
       });
     }
+    // Opened before the render and closed by the take below, so the render has a channel to
+    // declare into and nothing else does. A declaration against a request this never opened is a
+    // request that was replaced between here and the render, which the declaring side reports.
+    ɵopenPageOutcomeChannel(request);
     const result = await options.render({
       request,
       resolution,
       locale: settled ?? policy.defaultLocale,
     });
+    // Taken whether or not the renderer wrapped its answer, because the page declares from inside
+    // the render and the renderer's own return says nothing about that.
+    const fromRender = ɵtakePageOutcome(request);
 
     let rendered: Response;
-    let declared = false;
+    let declared: PageOutcomeDeclaration | undefined = fromRender;
     if (isDeclaration(result)) {
-      rendered = result.operationalFailure;
-      declared = true;
+      // The renderer's own statement replaces the page's. It is the outer frame: it saw the render
+      // finish and decided what the whole of it was worth, which a component in the middle of it
+      // could not.
+      declared = result.pageOutcome;
+      rendered = result.response ?? new Response(null);
     } else {
       rendered = result;
     }
 
     // Section 5's narrow rule: Atlas's classification wins for an address it refused, and the
-    // renderer's declared status wins for one it serves. An application declaring maintenance
-    // does not know which addresses Atlas refused, so a rule written the other way round would be
-    // one the application could not reason about.
-    const carriesDeclaration = declared && resolution.status === 'success';
-    if (declared && !carriesDeclaration) {
+    // declared outcome wins for one it serves. An application declaring maintenance does not know
+    // which addresses Atlas refused, so a rule written the other way round would be one the
+    // application could not reason about.
+    const carriesDeclaration =
+      declared !== undefined && resolution.status === 'success';
+    if (declared !== undefined && !carriesDeclaration) {
       reportOverriddenDeclaration(
         reported,
         url.pathname,
         resolution.status,
-        rendered.status,
+        declared,
         descriptor.status,
       );
     }
+    const effective: DeclaredPageOutcomeDescriptor =
+      carriesDeclaration && declared !== undefined
+        ? pageOutcomeHttpDescriptor(declared, descriptor)
+        : descriptor;
 
     const merged = new Headers(rendered.headers);
-    for (const [name, value] of atlasHeaders(
-      // A failure is not this address's representation, so it is not an answer a shared cache may
-      // hand to the next visitor who asks for the address.
-      carriesDeclaration ? 'private-no-store' : descriptor.cache,
-    )) {
+    for (const [name, value] of atlasHeaders(effective)) {
       if (name === 'set-cookie') merged.append(name, value);
       else merged.set(name, value);
     }
     return new Response(rendered.body, {
-      status: carriesDeclaration ? rendered.status : descriptor.status,
+      status: effective.status,
       headers: merged,
     });
   };
@@ -371,8 +445,8 @@ export function createLocaleRequestHandler(
 
 function isDeclaration(
   result: LocalizedRenderResult,
-): result is DeclaredOperationalFailure {
-  return 'operationalFailure' in result;
+): result is DeclaredPageOutcome {
+  return 'pageOutcome' in result;
 }
 
 /**
@@ -394,27 +468,41 @@ function inDevelopment(): boolean {
   return environment.process?.env?.['NODE_ENV'] !== 'production';
 }
 
+/** What a declaration states, in the words a warning should use for it. */
+function describeDeclaration(declaration: PageOutcomeDeclaration): string {
+  switch (declaration.outcome) {
+    case 'absent':
+      return 'an absent entity';
+    case 'gone':
+      return 'a permanent removal';
+    case 'operational-failure':
+      return `an operational failure with status ${declaration.status}`;
+  }
+}
+
 /**
- * Says once, where a developer will see it, that a declared status did not travel.
+ * Says once, where a developer will see it, that a declared outcome did not travel.
  *
- * Once per pair of statuses rather than once per address: the addresses are unbounded and
- * attacker-supplied, so keying the record on one would let a request decide how much this
- * process remembers. The address is in the text of the first report, where naming it helps,
+ * Once per pair of resolution and declaration rather than once per address: the addresses are
+ * unbounded and attacker-supplied, so keying the record on one would let a request decide how much
+ * this process remembers. The address is in the text of the first report, where naming it helps,
  * quoted so that a target carrying control characters cannot forge a line in a log.
  */
 function reportOverriddenDeclaration(
   reported: Set<string>,
   pathname: string,
   resolved: RenderableResolution['status'],
-  declaredStatus: number,
+  declaration: PageOutcomeDeclaration,
   servedStatus: number,
 ): void {
   if (!inDevelopment()) return;
-  const identity = `${resolved}:${declaredStatus}`;
+  const identity = `${resolved}:${declaration.outcome}:${
+    declaration.outcome === 'operational-failure' ? declaration.status : ''
+  }`;
   if (reported.has(identity)) return;
   reported.add(identity);
   console.warn(
-    `[Atlas] The renderer declared status ${declaredStatus} at ${JSON.stringify(pathname)} and the response is ${servedStatus}. Atlas resolved that address as ${JSON.stringify(resolved)}, and a declared operational failure travels only at an address Atlas serves, so the declaration was not applied. Declare one from a renderer called for a resolved address, or answer the refusal that address already carries.`,
+    `[Atlas] The render declared ${describeDeclaration(declaration)} at ${JSON.stringify(pathname)} and the response is ${servedStatus}. Atlas resolved that address as ${JSON.stringify(resolved)}, and a declared outcome travels only at an address Atlas serves, so the declaration was not applied. Declare one from a render of a resolved address, or answer the refusal that address already carries.`,
   );
 }
 

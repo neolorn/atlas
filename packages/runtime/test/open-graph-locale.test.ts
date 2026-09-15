@@ -5,7 +5,7 @@ import { openGraphLocale } from '@neolorn/atlas/core';
 /**
  * The failure mode, pinned.
  *
- * `specs/07-routing-rendering-and-seo.spec.md` section 12 is the rule: the format's own
+ * `specs/07-routing-rendering-and-seo.spec.md` section 13 is the rule: the format's own
  * underscore spelling, the territory from the maximized profile, no script subtag, and no value
  * at all where no territory can be determined, because a reader of the markup cannot tell a
  * malformed value from a territory it does not recognize.

@@ -22,6 +22,14 @@ messages:
   document.topic.description: One topic, addressed by a localized parameter.
   document.dossier.title: Dossier
   document.dossier.description: One dossier, whose address in each language is stored with it.
+  document.not-found.title: Page not found
+  document.not-found.description: This address does not name a page in this application.
+  document.gone.title: Page removed
+  document.gone.description: This address named a page that has been taken down for good.
+  document.unsupported-locale.title: Language not available
+  document.unsupported-locale.description: This deployment does not serve the language this address names.
+  document.topic-absent.title: Topic not found
+  document.topic-absent.description: No topic is filed under this address.
   social.image-alt: The Atlas feature lab preview card
   route.home: Home route
   route.second: Second route

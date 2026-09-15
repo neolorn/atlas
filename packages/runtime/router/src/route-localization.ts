@@ -7,7 +7,7 @@
  * that can disagree. A variant joins the alternate cluster only when the policy addresses it,
  * the build generated it, and the address serves it.
  *
- * Section 14 of `specs/07-routing-rendering-and-seo.spec.md` is why the title, the description,
+ * Section 15 of `specs/07-routing-rendering-and-seo.spec.md` is why the title, the description,
  * the alternates and the social block move with the commit rather than after it: they are
  * claims about which representation this is, and a page whose head names one locale while its
  * text is in another has told a crawler something untrue.
@@ -51,15 +51,18 @@ import {
   type LocalizationSnapshot,
   type LocalizationDiagnostic,
   type LocalizedParameterSpellings,
+  type PageOutcomeDeclaration,
   type PlainMessageHandle,
   type LocalizationScope,
   type GeneratedConfiguration,
   type LocaleUrlPolicy,
   type RouteResolution,
+  type RouteSeoProjection,
   type RouteRuntimeProjection,
 } from '@neolorn/atlas';
 
 import { LocalizedAddressSync } from './address-sync.js';
+import { LocalizedPageOutcome } from './page-outcome.js';
 import { LocalizedRouteParameters } from './route-parameters.js';
 
 /** Which route was reached, and on which navigation, for the metadata callback to read. */
@@ -78,6 +81,19 @@ export interface RouteLocalizationContext {
    * be recognized as belonging to a navigation that is over.
    */
   readonly navigationId: number;
+  /**
+   * What this page declared about itself, when it has declared anything.
+   *
+   * Present so a document callback can answer for the page it actually is: a route whose entity
+   * turned out to be absent wants the wording of a missing page rather than the wording of the
+   * article it was going to be. Atlas withdraws the canonical address and the alternates on its
+   * own, under section 12 of `specs/07-routing-rendering-and-seo.spec.md`; the sentences are the
+   * application's.
+   *
+   * Absent while nothing has been declared, which is every ordinary page. A declaration made after
+   * activation re-runs the callback with it present.
+   */
+  readonly pageOutcome?: PageOutcomeDeclaration;
 }
 
 /**
@@ -138,6 +154,22 @@ export interface RouteLocalizationOptions {
    */
   readonly documentMetadata?: Readonly<Record<string, RouteDocumentMessages>>;
   /**
+   * What the document says at an address that reached no route, keyed by what happened instead.
+   *
+   * Three answers a visitor can reach that have no route identity to look a title up by: an address
+   * this application does not serve, one whose entity the route table declares permanently removed,
+   * and one naming a locale this deployment does not support. Without this the head of each keeps
+   * whatever the previous page left in it, which is a missing page wearing the title of the page
+   * before it.
+   *
+   * Authored as messages for the reason `documentMetadata` is: `atlas check --require-complete`
+   * answers for a missing translation here under the same diagnostic as every other message, rather
+   * than under a second completeness mechanism.
+   */
+  readonly outcomeDocuments?: Readonly<
+    Partial<Record<LocalizedOutcomeClass, RouteDocumentMessages>>
+  >;
+  /**
    * The dynamic half, for what a catalog cannot hold.
    *
    * Runs after `documentMetadata` and its result is merged over it, field by field, so a route
@@ -152,6 +184,14 @@ export interface RouteLocalizationOptions {
     localization: Localization,
   ) => Omit<DocumentLocalizationProjection, 'seo'>;
 }
+
+/**
+ * A response that reached no route, named by what it is.
+ *
+ * The three renderable resolutions that carry no route identity, spelled exactly as
+ * `RouteResolution` spells them so one vocabulary answers in both places.
+ */
+export type LocalizedOutcomeClass = 'not-found' | 'gone' | 'unsupported-locale';
 
 /**
  * One route's document metadata, as messages.
@@ -275,6 +315,34 @@ function effectDiagnostic(message: string): LocalizationDiagnostic {
 }
 
 /**
+ * The SEO block a declared outcome leaves standing.
+ *
+ * Section 12 of `specs/07-routing-rendering-and-seo.spec.md` derives what the address implies
+ * rather than carrying it over, so a page that has declared its entity absent or removed withdraws
+ * the canonical address and the alternates the projection would have claimed. An alternate link
+ * states that the same page exists in another language, and section 10 already forbids one on a
+ * missing or gone response, so leaving them would publish a claim the response contradicts.
+ *
+ * An operational failure withdraws nothing. It says this render did not produce the page, which is
+ * a fact about one response rather than about the address, and section 12 lets a declaration narrow
+ * an indexing class rather than restate one.
+ */
+function withdrawnForOutcome(
+  seo: RouteSeoProjection | undefined,
+  outcome: PageOutcomeDeclaration | undefined,
+): RouteSeoProjection | undefined {
+  if (seo === undefined) return undefined;
+  if (outcome === undefined || outcome.outcome === 'operational-failure') {
+    return seo;
+  }
+  return Object.freeze({
+    indexing: 'non-indexable',
+    alternates: Object.freeze([]),
+    robots: 'noindex',
+  });
+}
+
+/**
  * Thrown when a navigation reached an address that did not resolve to a route in that locale.
  *
  * It carries the resolution rather than only a message, so a handler can tell an unknown address
@@ -331,6 +399,7 @@ export class RouteLocalization {
       }
     | undefined;
   private readonly parameters = inject(LocalizedRouteParameters);
+  private readonly pageOutcome = inject(LocalizedPageOutcome);
   /**
    * The address bar's keeper, injected so its step can be handed to the commit list.
    *
@@ -354,8 +423,19 @@ export class RouteLocalization {
   private readonly baseHref = applicationBaseHref();
   /** The declaration the head was last built from, so a re-projection happens once per change. */
   private declaredSpellings: LocalizedParameterSpellings | undefined;
+  /** The page outcome the head was last built from, on the same lifecycle as the spellings. */
+  private declaredOutcome: PageOutcomeDeclaration | undefined;
+  /**
+   * The outcome class the head currently describes, for a response that reached no route.
+   *
+   * Held rather than derived, because a locale change on such a page has no route context to
+   * rebuild from and the head still has to move into the new language.
+   */
+  private outcomeDocument: LocalizedOutcomeClass | undefined;
   /** Route ids already reported as untitled, so the warning is said once and not once a navigation. */
   private readonly untitledRoutes = new Set<string>();
+  /** Outcome classes already reported as undeclared, on the same once-only rule. */
+  private readonly undeclaredOutcomes = new Set<string>();
   private readonly environmentInjector = inject(EnvironmentInjector);
   private readonly pending = new Map<number, PendingRoute>();
   private commitPromise: Promise<LocaleChangeResult> | undefined;
@@ -426,6 +506,16 @@ export class RouteLocalization {
       const active = untracked(this.context);
       this.onParametersDeclared(
         this.parameters.ɵforNavigation(active?.navigationId ?? -1),
+      );
+    });
+    effect(() => {
+      // The same lifecycle as the spellings above and for the same reason: a page discovers that
+      // its entity is absent from the fetch that went looking for it, which finishes after the
+      // head was built. Section 12 requires the document to be re-projected when one arrives
+      // rather than left claiming a canonical address for a page that is not there.
+      const active = untracked(this.context);
+      this.onPageOutcomeDeclared(
+        this.pageOutcome.ɵforNavigation(active?.navigationId ?? -1),
       );
     });
     const subscription = this.router.events.subscribe((event) => {
@@ -569,9 +659,15 @@ export class RouteLocalization {
       // The locale is committed and the navigation continues, which lets the application's own
       // routing answer. The status a visitor receives is the host's to set, from the same
       // resolution, and `routeHttpDescriptor` states it.
+      //
+      // Cleared before the change rather than after it. Committing a locale re-projects the
+      // document, and the context still standing here is the page the visitor is leaving, so
+      // without this the head of a missing page is the previous page's head in the new language.
+      this.context.set(undefined);
       await this.localization.changeLocale(resolution.presentationLocale, {
         mode: this.options.mode ?? 'coordinated',
       });
+      this.applyOutcomeDocument(resolution.status);
       return undefined;
     }
     if (resolution.status !== 'success') {
@@ -744,6 +840,9 @@ export class RouteLocalization {
       });
     }
     this.context.set(pending.context);
+    // The head this navigation just wrote is a route's, so whatever outcome document stood before
+    // it no longer describes the page on screen.
+    this.outcomeDocument = undefined;
     this.documentLocale = pending.context.resolution.locale;
     // After `documentLocale`, for the reason `onLocaleCommitted` states: this publishes, and the
     // publish re-runs the locale effect. For a route that declared no spellings this record equals
@@ -791,6 +890,18 @@ export class RouteLocalization {
   ): Omit<DocumentLocalizationProjection, 'seo'> {
     const declared = this.options.documentMetadata?.[routeId];
     if (declared === undefined) return {};
+    return this.documentFrom(declared);
+  }
+
+  /**
+   * One set of declared document messages, resolved in the locale that has just committed.
+   *
+   * Shared by the route-keyed declarations and the outcome-keyed ones, because the two differ in
+   * what they are looked up by rather than in what they hold.
+   */
+  private documentFrom(
+    declared: RouteDocumentMessages,
+  ): Omit<DocumentLocalizationProjection, 'seo'> {
     const text = (
       handle: PlainMessageHandle | undefined,
     ): string | undefined =>
@@ -943,6 +1054,10 @@ export class RouteLocalization {
     // declaration would make the head depend on which subscriber Angular calls first.
     const spellings = this.parameters.ɵforNavigation(context.navigationId);
     this.declaredSpellings = spellings;
+    const outcome = this.pageOutcome.ɵforNavigation(context.navigationId);
+    this.declaredOutcome = outcome;
+    const declaredContext: RouteLocalizationContext =
+      outcome === undefined ? context : { ...context, pageOutcome: outcome };
     // One derivation, read twice. The head adds the origin and its eligibility rules below; the
     // switcher adds nothing and needs no origin, which is why this is derived here and not taken
     // out of the SEO projection: an application that configures no canonical origin projects no
@@ -955,7 +1070,7 @@ export class RouteLocalization {
       this.options.document === undefined
         ? {}
         : runInInjectionContext(this.environmentInjector, () =>
-            this.options.document?.(context, this.localization),
+            this.options.document?.(declaredContext, this.localization),
           );
     // Merged field by field, and `social` merged one level deeper, because the two halves answer
     // different questions about one block: a catalog holds the alt text and the site name, and only
@@ -970,7 +1085,7 @@ export class RouteLocalization {
         : { social: { ...declared.social, ...dynamic?.social } }),
     } as Omit<DocumentLocalizationProjection, 'seo'>;
     this.reportUntitledRoute(context.resolution.routeId, documentProjection);
-    const seo =
+    const projected =
       this.options.origin === undefined
         ? undefined
         : projectRouteSeo(
@@ -983,6 +1098,7 @@ export class RouteLocalization {
             addresses,
             this.baseHref,
           );
+    const seo = withdrawnForOutcome(projected, outcome);
     this.document.apply({
       ...documentProjection,
       // The locale is supplied here, not by the application. It is the locale Atlas has just
@@ -1020,7 +1136,16 @@ export class RouteLocalization {
     // write the outgoing page's title a moment before `applyDocument` writes the incoming one's.
     if (this.pending.size > 0) return;
     const active = untracked(this.context);
-    if (active === undefined) return;
+    if (active === undefined) {
+      // No route context, and that is not the same as nothing to do. A response that reached no
+      // route has a head written from its outcome class, and a locale change has to move it into
+      // the new language like any other head.
+      if (this.outcomeDocument !== undefined) {
+        this.documentLocale = locale;
+        this.applyOutcomeDocument(this.outcomeDocument);
+      }
+      return;
+    }
     // Re-resolved, not reused. A context carries the resolution it was built from, and that
     // resolution names the locale it resolved *to*, so projecting the old one again reproduces
     // the outgoing language exactly. The rebuild produces the destination address for the target
@@ -1087,6 +1212,81 @@ export class RouteLocalization {
    * declaration already staged for it, and projecting here as well would write the outgoing page's
    * head a moment before.
    */
+  /**
+   * Rebuild the head when the page declares what it turned out to be.
+   *
+   * The counterpart of `onParametersDeclared`, on the same lifecycle and guarded the same way. A
+   * page that discovers its entity is absent discovers it after activation, and until this runs the
+   * head is claiming a canonical address and an alternate cluster for a page that is not there.
+   */
+  private onPageOutcomeDeclared(
+    outcome: PageOutcomeDeclaration | undefined,
+  ): void {
+    if (outcome === this.declaredOutcome) return;
+    this.declaredOutcome = outcome;
+    if (this.pending.size > 0) return;
+    const active = untracked(this.context);
+    if (active === undefined) return;
+    try {
+      this.localization.ɵrestateRoute(
+        this.routeRecord(active, this.projectDocument(active)),
+      );
+    } catch {
+      // Same judgement as a late parameter declaration: the page is on screen, and a head that
+      // failed to move is reported by the projection's own diagnostics rather than turned into a
+      // navigation failure.
+    }
+  }
+
+  /**
+   * Write the head of a response that reached no route, from its outcome class.
+   *
+   * Section 12 of `specs/07-routing-rendering-and-seo.spec.md` gives these three their own
+   * declarations, because there is no route identity to look a title up by and the head is
+   * otherwise whatever the previous page left in it. No SEO block is projected: section 15 already
+   * refuses a canonical or an alternate relationship for an address this application does not
+   * serve.
+   */
+  private applyOutcomeDocument(outcomeClass: LocalizedOutcomeClass): void {
+    this.outcomeDocument = outcomeClass;
+    if (this.document === null) return;
+    const declared = this.options.outcomeDocuments?.[outcomeClass];
+    if (declared === undefined) {
+      this.reportUndeclaredOutcome(outcomeClass);
+      return;
+    }
+    const projection = this.documentFrom(declared);
+    if (projection.title === undefined)
+      this.reportUndeclaredOutcome(outcomeClass);
+    try {
+      this.document.apply({
+        ...projection,
+        locale:
+          this.localization.snapshot()?.primaryLocale ??
+          this.options.policy.defaultLocale,
+      });
+    } catch {
+      // The page is on screen and the status is the host's, already sent from the same resolution.
+      // A head that could not be written is reported by `DocumentLocalization`'s own refusal rather
+      // than turned into a failed navigation to a page that does not exist.
+    }
+  }
+
+  /**
+   * Says once that a response of this class was answered with no document declared for it.
+   *
+   * Reported when it happens rather than at startup, for the reason `reportUntitledRoute` states:
+   * the condition that matters is the one a visitor met.
+   */
+  private reportUndeclaredOutcome(outcomeClass: LocalizedOutcomeClass): void {
+    if (!isDevMode()) return;
+    if (this.undeclaredOutcomes.has(outcomeClass)) return;
+    this.undeclaredOutcomes.add(outcomeClass);
+    console.warn(
+      `[Atlas] A response classed ${JSON.stringify(outcomeClass)} was answered with no title. Declare one in outcomeDocuments, keyed by that class. The page keeps whatever title the previous one left, which tells a reader and a crawler that they are somewhere they are not.`,
+    );
+  }
+
   private onParametersDeclared(
     spellings: LocalizedParameterSpellings | undefined,
   ): void {

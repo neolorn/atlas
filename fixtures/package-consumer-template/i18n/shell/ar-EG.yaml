@@ -21,6 +21,14 @@ messages:
   document.topic.description: موضوع واحد، بعنوان مترجم.
   document.dossier.title: ملف
   document.dossier.description: ملف واحد، عنوانه في كل لغة مخزَّن معه.
+  document.not-found.title: الصفحة غير موجودة
+  document.not-found.description: هذا العنوان لا يشير إلى صفحة في هذا التطبيق.
+  document.gone.title: الصفحة أُزيلت
+  document.gone.description: هذا العنوان كان يشير إلى صفحة أُزيلت نهائيًا.
+  document.unsupported-locale.title: اللغة غير متاحة
+  document.unsupported-locale.description: هذا النشر لا يقدم اللغة التي يسميها هذا العنوان.
+  document.topic-absent.title: الموضوع غير موجود
+  document.topic-absent.description: لا يوجد موضوع تحت هذا العنوان.
   social.image-alt: بطاقة معاينة مختبر ميزات Atlas
   route.home: الصفحة الرئيسية
   route.second: الصفحة الثانية

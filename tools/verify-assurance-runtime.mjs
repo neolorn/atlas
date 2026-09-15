@@ -106,6 +106,7 @@ const injections = Object.freeze([
       '      await this.localization.changeLocale(resolution.presentationLocale, {',
       "        mode: this.options.mode ?? 'coordinated',",
       '      });',
+      '      this.applyOutcomeDocument(resolution.status);',
       '      return undefined;',
     ].join('\n'),
     replace: '      throw new RouteLocalizationError(resolution);',

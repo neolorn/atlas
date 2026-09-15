@@ -114,6 +114,33 @@ const ROUTE_DOCUMENTS = {
   },
 } as const;
 
+/**
+ * What the document says at an address that reached no route.
+ *
+ * Three answers a visitor can get that have no route id to look a title up by, so `ROUTE_DOCUMENTS`
+ * above cannot answer for any of them. Without these the head of a missing page is whatever the
+ * previous page left in it: `/en-us/nowhere` reached from the home page claimed to be the home page,
+ * in both languages, with a canonical link to prove it.
+ *
+ * Messages for the same reason the route documents are messages: a missing Arabic translation here
+ * is a build failure under `atlas check --require-complete` rather than an English title on an
+ * Arabic page.
+ */
+const OUTCOME_DOCUMENTS = {
+  'not-found': {
+    title: messages.document.notFound.title,
+    description: messages.document.notFound.description,
+  },
+  gone: {
+    title: messages.document.gone.title,
+    description: messages.document.gone.description,
+  },
+  'unsupported-locale': {
+    title: messages.document.unsupportedLocale.title,
+    description: messages.document.unsupportedLocale.description,
+  },
+} as const;
+
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
@@ -136,6 +163,7 @@ export const appConfig: ApplicationConfig = {
       {
         origin: SITE_ORIGIN,
         documentMetadata: ROUTE_DOCUMENTS,
+        outcomeDocuments: OUTCOME_DOCUMENTS,
         // What no catalog can hold: the article's own title, and the preview image URL. Everything
         // static is above, so this is down to the two facts that are genuinely dynamic and the one
         // that is genuinely this deployment's.
@@ -145,6 +173,21 @@ export const appConfig: ApplicationConfig = {
             ...SOCIAL_PREVIEW,
             imageAlt: localization.text(messages.social.imageAlt),
           };
+          // A route that resolved and turned out to hold nothing. Atlas withdraws the canonical
+          // link and the alternates on its own, because those are claims about the address; the
+          // wording is this application's, and this is where it says it.
+          if (
+            context.resolution.routeId === 'topic' &&
+            context.pageOutcome?.outcome === 'absent'
+          ) {
+            return {
+              title: localization.text(messages.document.topicAbsent.title),
+              description: localization.text(
+                messages.document.topicAbsent.description,
+              ),
+              social,
+            };
+          }
           return context.resolution.routeId === 'article' &&
             article !== undefined
             ? { title: article.title, description: article.summary, social }

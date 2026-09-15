@@ -29,6 +29,21 @@ export * from './contracts';
 export * from './routing';
 
 export {
+  pageAbsent,
+  pageGone,
+  pageOperationalFailure,
+  pageOutcomeHttpDescriptor,
+  ɵopenPageOutcomeChannel,
+  ɵrememberPageOutcome,
+  ɵtakePageOutcome,
+  type DeclaredPageOutcomeDescriptor,
+  type PageOutcomeAbsent,
+  type PageOutcomeDeclaration,
+  type PageOutcomeGone,
+  type PageOutcomeOperationalFailure,
+} from './page-outcome';
+
+export {
   directionForLocale,
   localeProfile,
   openGraphAlternates,

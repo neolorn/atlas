@@ -6,10 +6,13 @@ export {
 export {
   RouteLocalization,
   RouteLocalizationError,
+  type LocalizedOutcomeClass,
   type RouteDocumentMessages,
   type RouteLocalizationContext,
   type RouteLocalizationOptions,
 } from './route-localization.js';
+
+export { LocalizedPageOutcome } from './page-outcome.js';
 
 export { LocalizedRouteParameters } from './route-parameters.js';
 
