@@ -21,6 +21,22 @@ where a visitor whose language you do not serve should land.
 A route's title is a message handle, so the title changes with the locale in the same transition as
 everything else on the page.
 
+A title whose sentence takes a value carries the value beside it, bound with `documentMessage`:
+
+```text
+provideLocalizedRouter(routes, {
+  documentMetadata: {
+    'route:article': {
+      title: documentMessage(messages.document.article.title, { section: 'Guides' }),
+    },
+  },
+}),
+```
+
+A title with nothing in it that varies stays the bare handle. A handle naming a message that takes
+values, with none bound to it, is refused when the router is provided: resolved as it stands, that
+title reaches the tab and the search result with its placeholders unfilled.
+
 ## Keep a page out of the index
 
 Classify the route in its own `data`:

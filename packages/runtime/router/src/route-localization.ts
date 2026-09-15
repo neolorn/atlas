@@ -52,7 +52,6 @@ import {
   type LocalizationDiagnostic,
   type LocalizedParameterSpellings,
   type PageOutcomeDeclaration,
-  type PlainMessageHandle,
   type LocalizationScope,
   type GeneratedConfiguration,
   type LocaleUrlPolicy,
@@ -62,6 +61,10 @@ import {
 } from '@neolorn/atlas';
 
 import { LocalizedAddressSync } from './address-sync.js';
+import {
+  isBoundDocumentMessage,
+  type RouteDocumentField,
+} from './document-messages.js';
 import { LocalizedPageOutcome } from './page-outcome.js';
 import { LocalizedRouteParameters } from './route-parameters.js';
 
@@ -203,18 +206,18 @@ export type LocalizedOutcomeClass = 'not-found' | 'gone' | 'unsupported-locale';
  */
 export interface RouteDocumentMessages {
   /** What the tab and the search result say. The one field whose absence is reported. */
-  readonly title?: PlainMessageHandle;
+  readonly title?: RouteDocumentField;
   /** The page's own summary of itself, written for a reader rather than for a crawler. */
-  readonly description?: PlainMessageHandle;
+  readonly description?: RouteDocumentField;
   /** Social copy, for the fields Atlas cannot derive and a catalog can hold. */
-  readonly imageAlt?: PlainMessageHandle;
+  readonly imageAlt?: RouteDocumentField;
   /**
    * What the site calls itself in this locale, for the social card.
    *
    * Usually the same message on every route, and stated per route because a section that presents
    * itself under its own name is ordinary.
    */
-  readonly siteName?: PlainMessageHandle;
+  readonly siteName?: RouteDocumentField;
 }
 
 interface ResolvedRouteLocalizationOptions extends RouteLocalizationOptions {
@@ -903,9 +906,13 @@ export class RouteLocalization {
     declared: RouteDocumentMessages,
   ): Omit<DocumentLocalizationProjection, 'seo'> {
     const text = (
-      handle: PlainMessageHandle | undefined,
-    ): string | undefined =>
-      handle === undefined ? undefined : this.localization.text(handle);
+      field: RouteDocumentField | undefined,
+    ): string | undefined => {
+      if (field === undefined) return undefined;
+      return isBoundDocumentMessage(field)
+        ? this.localization.text(field.message, field.inputs)
+        : this.localization.text(field);
+    };
     const title = text(declared.title);
     const description = text(declared.description);
     const imageAlt = text(declared.imageAlt);

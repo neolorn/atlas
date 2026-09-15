@@ -5,6 +5,7 @@ import { Router, TitleStrategy } from '@angular/router';
 import { Localization, withRouting } from '@neolorn/atlas';
 import {
   LocalizedTitleStrategy,
+  documentMessage,
   provideLocalizedRouter,
   type LocalizedRouterOptions,
 } from '@neolorn/atlas/router';
@@ -158,6 +159,38 @@ describe('a route document declared by route id', () => {
     // And the declared one is not reported, which is what makes the case above a finding rather
     // than a warning that fires for everything.
     expect(untitled[0]).not.toContain('route:second');
+  });
+
+  it('refuses a message that takes a value with none bound to it', () => {
+    // Refused where the declaration is built, which is this call. `PlainMessageHandle` is
+    // assignable from a handle that declares inputs, so nothing about the type stops this being
+    // written, and resolved as it stands the title reads with its placeholder unfilled.
+    expect(() =>
+      provideLocalizedRouter(routes, {
+        documentMetadata: {
+          'route:second': { title: messages.welcome as never },
+        },
+      }),
+    ).toThrow(/takes "name"/u);
+  });
+
+  it('accepts the same message with its value bound', async () => {
+    const router = await configure({
+      'route:second': {
+        title: documentMessage(messages.welcome, { name: 'Atlas' }),
+      },
+    });
+    await router.navigateByUrl('/second');
+
+    expect(document.title).toBe('Welcome, Atlas!');
+  });
+
+  it('refuses an unbound message in an outcome document too', () => {
+    expect(() =>
+      provideLocalizedRouter(routes, {
+        outcomeDocuments: { 'not-found': { title: messages.welcome as never } },
+      }),
+    ).toThrow(/takes "name"/u);
   });
 
   it('reports a declaration naming a route that does not exist', async () => {

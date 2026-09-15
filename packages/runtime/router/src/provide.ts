@@ -29,6 +29,11 @@ import {
 } from '@neolorn/atlas';
 
 import { LocalizedAddressSync } from './address-sync.js';
+import {
+  isBoundDocumentMessage,
+  refuseUnboundDocumentMessage,
+  type RouteDocumentField,
+} from './document-messages.js';
 import { LocalizedLocationStrategy } from './location-strategy.js';
 import { LocalizedUrlHandlingStrategy } from './url-handling-strategy.js';
 import { LocalizedTitleStrategy } from './title-strategy.js';
@@ -160,6 +165,13 @@ export function provideLocalizedRouter(
   options: LocalizedRouterOptions = {},
   ...features: RouterFeatures[]
 ): EnvironmentProviders {
+  // First, before any provider is built. Section 12 of
+  // `specs/07-routing-rendering-and-seo.spec.md` requires a message whose inputs are not bound to be
+  // refused where the declaration is built rather than where the page is visited, and this call is
+  // where an application builds it. Deferred to a navigation, the failure is a title with its
+  // placeholders showing, on one route, in whichever locale that route was first opened in.
+  refuseUnboundDocumentMessages(options);
+
   // `withRouterConfig` provides ROUTER_CONFIGURATION non-multi and `provideRouter` simply
   // concatenates every feature's providers, so a consumer passing their own replaces Atlas's
   // entire config object: last one wins, no warning. Atlas applies its own first and the
@@ -462,6 +474,35 @@ function refusePolicyAtConfiguration(
     outcome: 'operational-failure',
     message: `provideLocalizedRouter() does not serve a ${JSON.stringify((unserved as LocaleUrlPolicy).kind)} locale URL policy. Atlas serves "path-prefix", "locale-neutral" and "locale-host".`,
   });
+}
+
+/**
+ * Every document message this application declared, checked against what each one takes.
+ *
+ * Both maps and every field of each, because the rule is about the declaration rather than about
+ * where it was keyed: an outcome document with an unbound message writes the same unfilled title as
+ * a route document with one.
+ */
+function refuseUnboundDocumentMessages(options: LocalizedRouterOptions): void {
+  const declarations = [
+    ...Object.values(options.documentMetadata ?? {}),
+    ...Object.values(options.outcomeDocuments ?? {}),
+  ];
+  for (const declared of declarations) {
+    for (const field of [
+      declared.title,
+      declared.description,
+      declared.imageAlt,
+      declared.siteName,
+    ] as readonly (RouteDocumentField | undefined)[]) {
+      if (field === undefined) continue;
+      if (isBoundDocumentMessage(field)) {
+        refuseUnboundDocumentMessage(field.message, field.inputs);
+      } else {
+        refuseUnboundDocumentMessage(field, undefined);
+      }
+    }
+  }
 }
 
 function reportTableProblems(table: LocalizedRouteTable): void {

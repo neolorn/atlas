@@ -12,6 +12,12 @@ export {
   type RouteLocalizationOptions,
 } from './route-localization.js';
 
+export {
+  documentMessage,
+  type BoundDocumentMessage,
+  type RouteDocumentField,
+} from './document-messages.js';
+
 export { LocalizedPageOutcome } from './page-outcome.js';
 
 export { LocalizedRouteParameters } from './route-parameters.js';
