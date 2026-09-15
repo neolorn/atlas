@@ -9,6 +9,44 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The 0.x line is the alpha
 stage, then the betas, then the release candidates that carry the changes breaking an earlier call.
 
+## [1.2.0] - 2026-09-15
+
+Five fixes to what the toolkit generates and to how it reports findings about it. Nothing is added
+and nothing is removed.
+
+### Fixed
+
+- The route table the analysis pass reads is a declaration rather than an empty table. Analysis
+  compiles the application against an overlay of the generated modules, and it is the pass that
+  discovers the routes, so the overlay cannot contain them. Emitted as an empty table closed with
+  `as const`, that overlay typed `routes` as `readonly []`, every field read on a member of one
+  resolved against `never`, and the errors were forwarded as ATL1401 against the application's own
+  lines. An application whose route table really is empty is a different case and still gets a
+  table.
+
+- The scope table the analysis pass reads no longer says which scopes the first render needs. A
+  scope is deferred when every use of its messages sits behind a lazy route boundary, which that
+  pass reads out of the application's source, so the overlay it starts from cannot know it. The
+  overlay stated `startup: true` for every scope, which is wrong for any application that has one
+  behind a boundary. `startup` is optional in the runtime contract and an absent field is read as a
+  startup scope, so the unknown case now leaves it absent, which is the same conservative answer
+  without the claim. The field stays part of the table's type there, so an application that reads
+  `startup` off the table it declared is not reported against while it is analysed.
+
+- A compilation whose analysis found nothing behind a lazy boundary records that it asked. The
+  deferred set was passed on only when it had something in it, so an application with no lazy
+  boundary produced the same table as a compilation that never analysed anything, which is the
+  distinction the field exists to carry.
+
+- A generated scope module carries the message family runtime only where the scope declares a
+  family. The three functions and the type they carry were emitted into every scope module, so an
+  application compiling with `noUnusedLocals` was told its own build held unread declarations in a
+  file it did not write and must not edit.
+
+- A finding inside a generated module names the module it is in. The overlay's path was sliced one
+  character past the `#i18n/` prefix, so a finding in `#i18n/lazy` was reported against
+  `.atlas-virtual/azy.ts`, which is a file no build produces.
+
 ## [1.1.0] - 2026-09-13
 
 A renderer can state the status of its own response. This closes the gap 1.0.1 recorded: serving
